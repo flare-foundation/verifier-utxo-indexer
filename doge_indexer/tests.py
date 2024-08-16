@@ -210,3 +210,7 @@ class TransactionLogicTest(TestCase):
         self.assertEqual(input_1.vin_n, 1)
         self.assertEqual(input_1.script_key_address, "DJ7YAd617uFLUoVG7LzJbbk4EZMRCNxkTq")
         self.assertEqual(input_1.value, "0.00100001")
+
+    def test_payment_reference_extracted(self):
+        # tx_id = "e0cc82dc9606efb224f1ecb5c06cdbc6cf511ad487089080f1edd18a61d342d6"
+        pass

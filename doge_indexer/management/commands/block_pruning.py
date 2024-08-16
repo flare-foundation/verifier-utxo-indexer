@@ -21,7 +21,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         prune_state = PruneSyncState.instance()
         while True:
-            if not config.PRUNE_KEEP_DAYS:
+            if not config.PRUNE_KEEP_DAYS or config.PRUNE_KEEP_DAYS <= 0:
+                logger.warn("Running a pruning task without PRUNE_KEEP_DAYS set, skipping")
                 return
 
             now_ts = int(time.time())

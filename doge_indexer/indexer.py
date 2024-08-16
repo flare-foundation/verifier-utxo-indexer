@@ -81,15 +81,26 @@ class DogeIndexerClient:
         """
         Extracts the initial block height from the config
         """
+        logger.info("Extracting initial block height")
         latest_block = DogeBlock.objects.order_by("block_number").last()
         if latest_block is None:
+            logger.info("No blocks in the database, starting from the initial block height")
             height = self._get_current_block_height(self.toplevel_worker)
+            if config.PRUNE_KEEP_DAYS <= 0:
+                logger.info(
+                    f"Pruning is disabled, starting from the initial block height set in config {config.INITIAL_BLOCK_HEIGHT}"
+                )
+                return config.INITIAL_BLOCK_HEIGHT
 
             safety_factor = 1.5
-
             blocks_since_pruning = int(config.PRUNE_KEEP_DAYS * 24 * 60 * safety_factor)
             if config.INITIAL_BLOCK_HEIGHT < height - blocks_since_pruning:
+                logger.info(
+                    f"Initial block is much older than pruning setting, starting from block {height - blocks_since_pruning}"
+                    f"Initial block height set: {config.INITIAL_BLOCK_HEIGHT}, pruning setting: {config.PRUNE_KEEP_DAYS} days with factor: {safety_factor}"
+                )
                 return height - blocks_since_pruning
+            logger.info(f"Starting from the initial block height set in config {config.INITIAL_BLOCK_HEIGHT}")
             return config.INITIAL_BLOCK_HEIGHT
 
         if latest_block.block_number < config.INITIAL_BLOCK_HEIGHT:
@@ -104,6 +115,7 @@ class DogeIndexerClient:
         """
         Runs the indexing process in a endless loop
         """
+        logger.info("Starting the indexer")
         while True:
             height = self._get_current_block_height(self.toplevel_worker)
 
