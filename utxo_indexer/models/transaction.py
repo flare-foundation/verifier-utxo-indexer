@@ -2,17 +2,17 @@ from typing import TYPE_CHECKING
 
 from django.db import models
 
-from doge_indexer.models.model_utils import HexString32ByteField
-from doge_indexer.models.types import ITransactionResponse
-from doge_indexer.utils import is_valid_bytes_32_hex
+from utxo_indexer.models.model_utils import HexString32ByteField
+from utxo_indexer.models.types import ITransactionResponse
+from utxo_indexer.utils import is_valid_bytes_32_hex
 
 if TYPE_CHECKING:
-    from doge_indexer.models import TransactionInput, TransactionInputCoinbase, TransactionOutput
+    from utxo_indexer.models import TransactionInput, TransactionInputCoinbase, TransactionOutput
 
 ZERO_REFERENCE = "0000000000000000000000000000000000000000000000000000000000000000"
 
 
-class DogeTransaction(models.Model):
+class UtxoTransaction(models.Model):
     transactioninput_set: models.Manager["TransactionInput"]
     transactioninputcoinbase_set: models.Manager["TransactionInputCoinbase"]
     transactionoutput_set: models.Manager["TransactionOutput"]

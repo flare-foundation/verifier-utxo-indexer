@@ -2,7 +2,7 @@ import time
 
 from django.core.management.base import BaseCommand, CommandParser
 
-from doge_indexer.indexer import DogeIndexerClient
+from utxo_indexer.indexer import get_indexer_client
 
 
 class Command(BaseCommand):
@@ -18,7 +18,7 @@ class Command(BaseCommand):
         from_block = options["from_block"]
         to_block = options["to_block"]
 
-        indexer = DogeIndexerClient()
+        indexer = get_indexer_client()
         start = time.time()
         for block in range(int(from_block), int(to_block) + 1):
             block_start = time.time()

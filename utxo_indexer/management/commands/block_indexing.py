@@ -1,9 +1,9 @@
 from django.core.management.base import BaseCommand
 
-from doge_indexer.indexer import DogeIndexerClient
+from utxo_indexer.indexer import get_indexer_client
 
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        indexer = DogeIndexerClient()
+        indexer = get_indexer_client()
         indexer.run()

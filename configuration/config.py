@@ -2,9 +2,12 @@ import os
 
 from configuration.types import Config
 
+AVAILABLE_SOURCES = ["doge", "btc"]
+
 
 def get_config() -> Config:
     # required env values
+    source_name = os.environ["SOURCE_NAME"]
     node_rpc_url = os.environ["NODE_RPC_URL"]
     auth_username = os.environ["AUTH_USERNAME"]
     auth_password = os.environ["AUTH_PASSWORD"]
@@ -17,7 +20,12 @@ def get_config() -> Config:
     prune_keep_days = int(os.environ.get("PRUNE_KEEP_DAYS", "0"))
     prune_interval_seconds = int(os.environ.get("PRUNE_INTERVAL_SECONDS", "60"))
 
+    # Health checks
+    if source_name.lower() not in AVAILABLE_SOURCES:
+        raise ValueError(f"Invalid source name. Available sources are {AVAILABLE_SOURCES}")
+
     return Config(
+        SOURCE_NAME=source_name,
         NODE_RPC_URL=node_rpc_url,
         AUTH_USERNAME=auth_username,
         AUTH_PASSWORD=auth_password,

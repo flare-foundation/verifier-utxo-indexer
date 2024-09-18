@@ -1,14 +1,14 @@
 from django.contrib import admin
 
-from doge_indexer.models import (
-    DogeBlock,
-    DogeTransaction,
+from utxo_indexer.models import (
     TipSyncState,
     TransactionInput,
     TransactionInputCoinbase,
     TransactionOutput,
+    UtxoBlock,
+    UtxoTransaction,
 )
-from doge_indexer.models.sync_state import PruneSyncState
+from utxo_indexer.models.sync_state import PruneSyncState
 
 
 class TransactionInputInline(admin.TabularInline):
@@ -34,8 +34,8 @@ class TransactionOutputInline(admin.TabularInline):
     readonly_fields = fields
 
 
-@admin.register(DogeTransaction)
-class DogeTransactionAdmin(admin.ModelAdmin):
+@admin.register(UtxoTransaction)
+class UtxoTransactionAdmin(admin.ModelAdmin):
     list_display = ("transaction_id", "block_number", "timestamp", "payment_reference")
     search_fields = ("transaction_id", "block_number")
     ordering = ("-timestamp",)
@@ -43,8 +43,8 @@ class DogeTransactionAdmin(admin.ModelAdmin):
     inlines = (TransactionInputCoinbaseInline, TransactionInputInline, TransactionOutputInline)
 
 
-@admin.register(DogeBlock)
-class DogeBlockAdmin(admin.ModelAdmin):
+@admin.register(UtxoBlock)
+class UtxoBlockAdmin(admin.ModelAdmin):
     list_display = ("block_number", "timestamp", "block_hash", "transactions")
     search_fields = ("block_number", "block_hash")
     ordering = ("-timestamp",)

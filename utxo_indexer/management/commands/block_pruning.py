@@ -5,14 +5,14 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from configuration.config import config
-from doge_indexer.models import (
-    DogeBlock,
-    DogeTransaction,
+from utxo_indexer.models import (
     TransactionInput,
     TransactionInputCoinbase,
     TransactionOutput,
+    UtxoBlock,
+    UtxoTransaction,
 )
-from doge_indexer.models.sync_state import PruneSyncState
+from utxo_indexer.models.sync_state import PruneSyncState
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class Command(BaseCommand):
 
             logger.info(f"Pruning at: {now_ts} all transactions and block before cutoff: {cutoff}")
 
-            latest_block = DogeBlock.objects.order_by("block_number").last()
+            latest_block = UtxoBlock.objects.order_by("block_number").last()
             if latest_block is None or latest_block.timestamp <= cutoff:
                 logger.info(
                     "Not pruning when the latest block height is older than PRUNE_KEEP_DAYS (%s days)",
@@ -45,11 +45,11 @@ class Command(BaseCommand):
                     TransactionOutput.objects.filter(transaction_link__timestamp__lt=cutoff).delete()
 
                     # then others
-                    DogeBlock.objects.filter(timestamp__lt=cutoff).delete()
-                    DogeTransaction.objects.filter(timestamp__lt=cutoff).delete()
+                    UtxoBlock.objects.filter(timestamp__lt=cutoff).delete()
+                    UtxoTransaction.objects.filter(timestamp__lt=cutoff).delete()
 
-                    bottom_block = DogeBlock.objects.order_by("block_number").first()
-                    bottom_block_transaction = DogeTransaction.objects.order_by("block_number").first()
+                    bottom_block = UtxoBlock.objects.order_by("block_number").first()
+                    bottom_block_transaction = UtxoTransaction.objects.order_by("block_number").first()
 
                     if bottom_block is not None and bottom_block_transaction is not None:
                         if bottom_block.block_number != bottom_block_transaction.block_number:

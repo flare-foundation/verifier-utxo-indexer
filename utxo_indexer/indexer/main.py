@@ -9,24 +9,25 @@ from django.db import transaction
 from requests.auth import HTTPBasicAuth
 from requests.sessions import Session
 
+from client import DogeClient
+from client.btc_client import BtcClient
 from configuration.config import config
-from doge_client.main import DogeClient
-from doge_indexer.models import (
-    DogeBlock,
-    DogeTransaction,
+from utxo_indexer.models import (
     TipSyncState,
     TipSyncStateChoices,
     TransactionInput,
     TransactionInputCoinbase,
     TransactionOutput,
+    UtxoBlock,
+    UtxoTransaction,
 )
-from doge_indexer.models.types import IUtxoVinTransaction
+from utxo_indexer.models.types import IUtxoVinTransaction
 
 logger = logging.getLogger(__name__)
 
 
 class BlockProcessorMemory(TypedDict):
-    tx: List[DogeTransaction]
+    tx: List[UtxoTransaction]
     vins: List[TransactionInput]
     vins_cb: List[TransactionInputCoinbase]
     vouts: List[TransactionOutput]
@@ -67,11 +68,20 @@ def retry(n: int):
 # Main class
 
 
-class DogeIndexerClient:
-    def __init__(self) -> None:
-        self._client = DogeClient()
+class CommonIndexerClient:
+    """
+    Base class for indexer clients
+    - Client: client for interacting with the node (DogeClient or BtcClient)
+    - Expected production: expected time for block production of the chain (60 for DOGE, 600 for BTC)
+    """
+
+    def __init__(self, client, expected_production) -> None:
+        self._client = client
         self.workers = [new_session() for _ in range(config.NUMBER_OF_WORKERS)]
         self.toplevel_worker = self.workers[0]
+
+        assert expected_production > 0, "Expected block production time should be positive"
+        self.expected_block_production_time = expected_production
 
         # Determining starting block height for indexing
         self.latest_indexed_block_height = self.extract_initial_block_height()
@@ -82,7 +92,7 @@ class DogeIndexerClient:
         Extracts the initial block height from the config
         """
         logger.info("Extracting initial block height")
-        latest_block = DogeBlock.objects.order_by("block_number").last()
+        latest_block = UtxoBlock.objects.order_by("block_number").last()
         if latest_block is None:
             logger.info("No blocks in the database, starting from the initial block height")
             height = self._get_current_block_height(self.toplevel_worker)
@@ -93,10 +103,12 @@ class DogeIndexerClient:
                 return config.INITIAL_BLOCK_HEIGHT
 
             safety_factor = 1.5
-            blocks_since_pruning = int(config.PRUNE_KEEP_DAYS * 24 * 60 * safety_factor)
+            blocks_since_pruning = int(
+                config.PRUNE_KEEP_DAYS * 24 * 60 * 60 * safety_factor / self.expected_block_production_time
+            )
             if config.INITIAL_BLOCK_HEIGHT < height - blocks_since_pruning:
                 logger.info(
-                    f"Initial block is much older than pruning setting, starting from block {height - blocks_since_pruning}"
+                    f"Initial block is much older than pruning setting, starting from block {height - blocks_since_pruning} \n"
                     f"Initial block height set: {config.INITIAL_BLOCK_HEIGHT}, pruning setting: {config.PRUNE_KEEP_DAYS} days with factor: {safety_factor}"
                 )
                 return height - blocks_since_pruning
@@ -198,14 +210,26 @@ class DogeIndexerClient:
         tip_state.timestamp = int(time.time())
         tip_state.save()
 
+    def process_block(self, block_height: int):
+        """
+        Process the block with given height
+
+        Args:
+            block_height (int): height of the block to process
+        """
+        raise NotImplementedError("Implement the block processing method")
+
+
+class DogeIndexerClient(CommonIndexerClient):
+    def __init__(self) -> None:
+        super().__init__(DogeClient(), 60)
+
     # Block processing part
     def process_block(self, block_height: int):
-        # TODO: we always assume that block processing is for blocks that are for sure on main branch of the blockchain
+        # NOTICE: we always assume that block processing is for blocks that are for sure on main branch of the blockchain
 
         processed_blocks: BlockProcessorMemory = {"tx": [], "vins": [], "vins_cb": [], "vouts": []}
         process_queue: queue.Queue = queue.Queue()
-
-        time.time()
 
         block_hash = self._get_block_hash_from_height(block_height, self.toplevel_worker)
         res_block = self._get_block_by_hash(block_hash, self.toplevel_worker)
@@ -218,7 +242,7 @@ class DogeIndexerClient:
 
         # Update the block info in DB, indicating it has processed transactions once we proceeded them
         # do it within transaction atomic update
-        block_db = DogeBlock.object_from_node_response(res_block)
+        block_db = UtxoBlock.object_from_node_response(res_block)
 
         # Put all of the transaction in block on the processing queue
         for tx in tx_ids:
@@ -239,14 +263,12 @@ class DogeIndexerClient:
         if not process_queue.empty():
             raise Exception("Queue should be empty after processing")
 
-        # TODO: think about handling this in 2 steps of multithreading
-
         with transaction.atomic():
-            DogeTransaction.objects.bulk_create(processed_blocks["tx"], batch_size=999)
+            UtxoTransaction.objects.bulk_create(processed_blocks["tx"], batch_size=999)
             TransactionInputCoinbase.objects.bulk_create(processed_blocks["vins_cb"], batch_size=999)
             TransactionInput.objects.bulk_create(processed_blocks["vins"], batch_size=999)
             TransactionOutput.objects.bulk_create(processed_blocks["vouts"], batch_size=999)
-            DogeBlock.objects.bulk_create([block_db])
+            UtxoBlock.objects.bulk_create([block_db])
             self.update_tip_state_done_block_process(block_height)
 
 
@@ -271,7 +293,7 @@ def process_toplevel_transaction(
     def _process_toplevel_transaction(session: Session, processed_block: BlockProcessorMemory):
         res = transaction_getter(txid, session)
 
-        tx_link = DogeTransaction.object_from_node_response(res, block_info["block_num"], block_info["block_ts"])
+        tx_link = UtxoTransaction.object_from_node_response(res, block_info["block_num"], block_info["block_ts"])
         processed_block["tx"].append(tx_link)
 
         for ind, vin in enumerate(res["vin"]):
@@ -320,3 +342,63 @@ def thread_worker(session: Session, process_queue: queue.Queue, processed_block:
             item(session, processed_block)
         else:
             raise Exception("Item in queue is not callable")
+
+
+class BtcIndexerClient(CommonIndexerClient):
+    def __init__(self) -> None:
+        super().__init__(BtcClient(), 600)
+
+    # Block processing part
+    def process_block(self, block_height: int):
+        # NOTICE: we always assume that block processing is for blocks that are for sure on main branch of the blockchain
+
+        processed_blocks: BlockProcessorMemory = {"tx": [], "vins": [], "vins_cb": [], "vouts": []}
+
+        block_hash = self._get_block_hash_from_height(block_height, self.toplevel_worker)
+        res_block = self._get_block_by_hash(block_hash, self.toplevel_worker)
+
+        block_db = UtxoBlock.object_from_node_response(res_block)
+
+        block_info: BlockInformationPassing = {
+            "block_num": res_block["height"],
+            "block_ts": res_block["mediantime"],
+        }
+
+        for tx in res_block["tx"]:
+            tx_link = UtxoTransaction.object_from_node_response(tx, block_info["block_num"], block_info["block_ts"])
+            processed_blocks["tx"].append(tx_link)
+            for vin_n, vin in enumerate(tx["vin"]):
+                if "txid" not in vin or "vout" not in vin:
+                    # Only coinbase transactions have no txid
+                    processed_blocks["vins_cb"].append(
+                        TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
+                    )
+                else:
+                    processed_blocks["vins"].append(
+                        TransactionInput.object_from_node_response(
+                            vin_n, vin, {"n": vin["vout"]} | vin["prevout"], tx_link.transaction_id
+                        )
+                    )
+            for vout in tx["vout"]:
+                processed_blocks["vouts"].append(
+                    TransactionOutput.object_from_node_response(vout, tx_link.transaction_id)
+                )
+
+        with transaction.atomic():
+            UtxoTransaction.objects.bulk_create(processed_blocks["tx"], batch_size=999)
+            TransactionInputCoinbase.objects.bulk_create(processed_blocks["vins_cb"], batch_size=999)
+            TransactionInput.objects.bulk_create(processed_blocks["vins"], batch_size=999)
+            TransactionOutput.objects.bulk_create(processed_blocks["vouts"], batch_size=999)
+            UtxoBlock.objects.bulk_create([block_db])
+            self.update_tip_state_done_block_process(block_height)
+
+
+def get_indexer_client():
+    source = config.SOURCE_NAME
+    match source:
+        case "doge":
+            return DogeIndexerClient()
+        case "btc":
+            return BtcIndexerClient()
+        case _:
+            raise ValueError(f"Invalid source name. Available sources are {config.AVAILABLE_SOURCES}")

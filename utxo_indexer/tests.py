@@ -2,15 +2,15 @@ from typing import Any
 
 from django.test import TestCase
 
-from doge_indexer.indexer import DogeIndexerClient
-from doge_indexer.models import (
-    DogeBlock,
-    DogeTransaction,
+from utxo_indexer.indexer import DogeIndexerClient
+from utxo_indexer.models import (
     TransactionInput,
     TransactionInputCoinbase,
     TransactionOutput,
+    UtxoBlock,
+    UtxoTransaction,
 )
-from doge_indexer.models.transaction import ZERO_REFERENCE
+from utxo_indexer.models.transaction import ZERO_REFERENCE
 
 # Note that all of the tests are using the DOGE mainnet blockchain.
 # See the .env.example file for the configuration.
@@ -33,10 +33,10 @@ class IndexingBlockWorkingTest(TestCase):
         """Testing indexing for block 4855034"""
         self.indexer.process_block(4855034)
 
-        block_count = DogeBlock.objects.count()
+        block_count = UtxoBlock.objects.count()
         self.assertEqual(block_count, 1)
-        transaction_from_block = DogeBlock.objects.get(block_number=4855034).transactions
-        transaction_count = DogeTransaction.objects.count()
+        transaction_from_block = UtxoBlock.objects.get(block_number=4855034).transactions
+        transaction_count = UtxoTransaction.objects.count()
         inputs_count = TransactionInput.objects.count()
         outputs_count = TransactionOutput.objects.count()
         coinbase_count = TransactionInputCoinbase.objects.count()
@@ -85,7 +85,7 @@ class TransactionLogicTest(TestCase):
 
     def test_should_index_block(self):
         """Testing indexing for block 4994995"""
-        transaction_count = DogeTransaction.objects.count()
+        transaction_count = UtxoTransaction.objects.count()
         inputs_count = TransactionInput.objects.count()
         outputs_count = TransactionOutput.objects.count()
         coinbase_count = TransactionInputCoinbase.objects.count()
@@ -97,7 +97,7 @@ class TransactionLogicTest(TestCase):
 
     def test_should_coinbase_transaction_fields(self):
         tx_id = "8cba14a73c5de6e995ca170d948c2a35a4c94ddb702d515119fde5b2a482a1e5"
-        coinbase_tx = DogeTransaction.objects.get(transaction_id=tx_id)
+        coinbase_tx = UtxoTransaction.objects.get(transaction_id=tx_id)
 
         self.assertEqual(coinbase_tx.transaction_id, tx_id)
         self.assertEqual(coinbase_tx.block_number, 4994995)
@@ -107,7 +107,7 @@ class TransactionLogicTest(TestCase):
         self.assertEqual(coinbase_tx.transaction_type, "coinbase")
 
     def test_should_coinbase_transaction_inputs_count(self):
-        coinbase_tx = DogeTransaction.objects.get(
+        coinbase_tx = UtxoTransaction.objects.get(
             transaction_id="8cba14a73c5de6e995ca170d948c2a35a4c94ddb702d515119fde5b2a482a1e5"
         )
 
@@ -121,7 +121,7 @@ class TransactionLogicTest(TestCase):
 
     def test_should_coinbase_transaction_inputs_details(self):
         tx_id = "8cba14a73c5de6e995ca170d948c2a35a4c94ddb702d515119fde5b2a482a1e5"
-        coinbase_tx = DogeTransaction.objects.get(transaction_id=tx_id)
+        coinbase_tx = UtxoTransaction.objects.get(transaction_id=tx_id)
 
         cb_inputs_set = coinbase_tx.transactioninputcoinbase_set.all()
         outputs_set = coinbase_tx.transactionoutput_set.all()
@@ -146,7 +146,7 @@ class TransactionLogicTest(TestCase):
 
     def test_should_full_payment_transaction_fields(self):
         tx_id = "e449018153f0792a3f8f10825594151dcb7a5e2ea302b542265353b8c48d337c"
-        tx = DogeTransaction.objects.get(transaction_id=tx_id)
+        tx = UtxoTransaction.objects.get(transaction_id=tx_id)
 
         self.assertEqual(tx.transaction_id, tx_id)
         self.assertEqual(tx.block_number, 4994995)
@@ -157,7 +157,7 @@ class TransactionLogicTest(TestCase):
 
     def test_should_full_payment_transaction_inputs_count(self):
         tx_id = "e449018153f0792a3f8f10825594151dcb7a5e2ea302b542265353b8c48d337c"
-        tx = DogeTransaction.objects.get(transaction_id=tx_id)
+        tx = UtxoTransaction.objects.get(transaction_id=tx_id)
 
         inputs = tx.transactioninput_set.count()
         cb_inputs = tx.transactioninputcoinbase_set.count()
@@ -169,7 +169,7 @@ class TransactionLogicTest(TestCase):
 
     def test_should_full_payment_transaction_outputs_details(self):
         tx_id = "e449018153f0792a3f8f10825594151dcb7a5e2ea302b542265353b8c48d337c"
-        tx = DogeTransaction.objects.get(transaction_id=tx_id)
+        tx = UtxoTransaction.objects.get(transaction_id=tx_id)
 
         outputs = tx.transactionoutput_set.all()
 
@@ -191,7 +191,7 @@ class TransactionLogicTest(TestCase):
 
     def test_should_full_payment_transaction_inputs_details(self):
         tx_id = "26b85fa8b6104bbfd0a52eb252b1be09dcddc2e3eeb10fef353e663869dcb26a"
-        tx = DogeTransaction.objects.get(transaction_id=tx_id)
+        tx = UtxoTransaction.objects.get(transaction_id=tx_id)
 
         inputs = tx.transactioninput_set.all()
 

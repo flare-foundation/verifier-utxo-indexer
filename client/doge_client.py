@@ -2,6 +2,8 @@ from requests.sessions import Session
 
 from configuration.config import config
 
+# TODO: Add type hints
+
 
 class DogeClient:
     """

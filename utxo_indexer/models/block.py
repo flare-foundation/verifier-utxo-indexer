@@ -1,10 +1,10 @@
 from django.db import models
 
-from doge_indexer.models.model_utils import HexString32ByteField
-from doge_indexer.models.types import IBlockResponse
+from utxo_indexer.models.model_utils import HexString32ByteField
+from utxo_indexer.models.types import IBlockResponse
 
 
-class DogeBlock(models.Model):
+class UtxoBlock(models.Model):
     block_hash = HexString32ByteField(primary_key=True, db_column="blockHash")
 
     block_number = models.PositiveIntegerField(db_column="blockNumber")
@@ -15,10 +15,6 @@ class DogeBlock(models.Model):
     transactions = models.PositiveIntegerField(db_column="transactions")
 
     confirmed = models.BooleanField(default=False, db_column="confirmed")
-
-    # relevant only if confirmed not true
-    # TODO: GrePod why
-    # number_of_confirmations = models.PositiveIntegerField(db_column="numberOfConfirmations")
 
     class Meta:
         indexes = (

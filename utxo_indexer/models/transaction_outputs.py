@@ -1,7 +1,7 @@
 from django.db import models
 
-from doge_indexer.models.model_utils import HexString32ByteField
-from doge_indexer.models.types import (
+from utxo_indexer.models.model_utils import HexString32ByteField
+from utxo_indexer.models.types import (
     IUtxoScriptPubKey,
     IUtxoVinTransaction,
     IUtxoVinTransactionExtended,
@@ -39,7 +39,7 @@ class AbstractTransactionOutput(models.Model):
 
 
 class TransactionOutput(AbstractTransactionOutput):
-    transaction_link = models.ForeignKey("DogeTransaction", on_delete=models.CASCADE)
+    transaction_link = models.ForeignKey("UtxoTransaction", on_delete=models.CASCADE)
 
     class Meta:
         unique_together = (("transaction_link", "n"),)
@@ -66,7 +66,7 @@ class TransactionOutput(AbstractTransactionOutput):
 
 
 class TransactionInputCoinbase(models.Model):
-    transaction_link = models.ForeignKey("DogeTransaction", on_delete=models.CASCADE)
+    transaction_link = models.ForeignKey("UtxoTransaction", on_delete=models.CASCADE)
 
     # Position in vin array of transaction (always 0 for coinbase)
     vin_n = models.PositiveIntegerField(db_column="vinN")
@@ -98,7 +98,7 @@ class TransactionInputCoinbase(models.Model):
 
 
 class TransactionInput(AbstractTransactionOutput):
-    transaction_link = models.ForeignKey("DogeTransaction", on_delete=models.CASCADE)
+    transaction_link = models.ForeignKey("UtxoTransaction", on_delete=models.CASCADE)
 
     # Position in vin array of transaction
     vin_n = models.PositiveIntegerField(db_column="vinN")
