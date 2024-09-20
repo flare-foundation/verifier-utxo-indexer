@@ -4,24 +4,15 @@ coverage==7.6.1
 
 # Django Core
 django-types
-Django==4.2
+Django==5.1.1
 
 # postgres adapter
-psycopg[binary]==3.1.8
+psycopg[binary]==3.2.2
 
 # Django Extensions
-django-cors-headers==3.14.0 # For Cross-Origin Resource Sharing
-django-simple-history==3.3.0 # To store model history in admin
-
-# Django Rest Framework
-djangorestframework-types
-djangorestframework==3.14.0
-drf-spectacular==0.26.0 # To generate OpenAPI 3 schema for REST framework
-
-# Requerements Monitoring
-pip-requirements-parser==32.0.1
-types-setuptools
+django-cors-headers==4.4.0
 
 # Other
-requests==2.31.0
-attrs==23.1.0
+requests==2.32.3
+types-requests==2.32.0.20240914
+attrs==24.2.0

@@ -17,30 +17,18 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-
-from .monitoring import RequirementsViewSet
 
 admin.site.site_header = f"{settings.PROJECT_NAME} {settings.PROJECT_SETTINGS} {settings.PROJECT_VERSION}"
 admin.site.site_title = f"{settings.PROJECT_NAME} {settings.PROJECT_SETTINGS}"
 admin.site.index_title = f"{settings.PROJECT_NAME}"
 
 
-urlpatterns = [
-    # admin
-    path("_admin/", admin.site.urls),
-    # requirements monitoring endpoint
-    path("api/monitoring/requirements", RequirementsViewSet.as_view({"get": "list"}), name="requirements"),
-    # drf-spectacular generated schema and ui
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    # api
-    # path("api/indexer/", include("utxo_indexer.urls")),
-]
+urlpatterns = []
 
-# v0 api
-urlpatterns += []
+if settings.DJANGO_ADMIN_PATH is not None:
+    urlpatterns.append(
+        path(settings.DJANGO_ADMIN_PATH, admin.site.urls),
+    )
 
 if "django_prometheus" in settings.INSTALLED_APPS:
     urlpatterns.append(path("", include("django_prometheus.urls")))

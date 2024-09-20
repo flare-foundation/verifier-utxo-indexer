@@ -3,7 +3,6 @@ from string import ascii_lowercase, ascii_uppercase, digits, punctuation
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core import exceptions
 from django.db import models
-from simple_history.models import HistoricalRecords
 
 
 class AFPasswordValidator:
@@ -93,16 +92,14 @@ class AFUser(AbstractUser):
     # we want email as username field and username field has to be unique
     email = models.EmailField(max_length=255, unique=True)
 
-    history = HistoricalRecords()
-
     objects = UserManager()
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ("username", "first_name", "last_name")
 
     class Meta:
-        verbose_name = "uporabnik"
-        verbose_name_plural = "uporabniki"
+        verbose_name = "User"
+        verbose_name_plural = "Users"
         ordering = ("email",)
 
     #################################################################
