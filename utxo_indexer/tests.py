@@ -27,7 +27,7 @@ from utxo_indexer.models.transaction import ZERO_REFERENCE
 
 class IndexingBlockWorkingTest(TestCase):
     def setUp(self):
-        self.indexer = DogeIndexerClient()
+        self.indexer = DogeIndexerClient.default()
 
     def test_should_index_block(self):
         """Testing indexing for block 4855034"""
@@ -80,7 +80,7 @@ class IndexingBlockWorkingTest(TestCase):
 
 class TransactionLogicTest(TestCase):
     def setUp(self, **kwargs: Any) -> Any:
-        self.indexer = DogeIndexerClient()
+        self.indexer = DogeIndexerClient.default()
         self.indexer.process_block(4994995)
 
     def test_should_index_block(self):

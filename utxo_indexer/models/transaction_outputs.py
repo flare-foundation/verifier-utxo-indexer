@@ -25,6 +25,9 @@ class AbstractTransactionOutput(models.Model):
         abstract = True
         indexes = (models.Index(fields=["script_key_address"]),)
 
+    def __str__(self) -> str:
+        return super().__str__()
+
     def to_vout_response(self) -> IUtxoVoutTransaction:
         print(self.value)
         script_pub_key: IUtxoScriptPubKey = {
@@ -43,6 +46,9 @@ class TransactionOutput(AbstractTransactionOutput):
 
     class Meta:
         unique_together = (("transaction_link", "n"),)
+
+    def __str__(self) -> str:
+        return super().__str__()
 
     @classmethod
     def object_from_node_response(cls, response: IUtxoVoutTransaction, transaction_link_id: str):
