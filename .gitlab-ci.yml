@@ -94,25 +94,27 @@ test_django:
     - cd /app
     - coverage run --source="." manage.py test --settings=project.settings.ci_testing
     - coverage xml
+    - mv coverage.xml $CI_PROJECT_DIR/
+    - mv testreport.xml $CI_PROJECT_DIR/
   after_script:
     - cp /app/testreport.xml ${CI_PROJECT_DIR}/junit-report.xml
   artifacts:
     reports:
-      junit: junit-report.xml
+      junit: testreport.xml
+      cobertura: coverage.xml
+      # NOTE:(matej) above is depricated and is changing to this in next GitLab release
+      # coverage_report:
+      #   coverage_format: cobertura
+      #   path: coverage.xml
   only:
     - branches
-
-test_black:
-  <<: *test
-  script:
-    - cd /app
-    - python -m black --check .
 
 test_ruff:
   <<: *test
   script:
     - cd /app
-    - python -m ruff .
+    - python -m ruff check .
+    - python -m ruff format --check
 
 deploy_develop:
   <<: *deploy

@@ -1,8 +1,6 @@
 # tests
-black
-ruff
-mypy
-coverage==7.3.2
+ruff==0.6.6
+coverage==7.6.1
 
 # Django Core
 django-types
