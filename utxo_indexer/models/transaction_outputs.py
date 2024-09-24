@@ -2,9 +2,7 @@ from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
 from utxo_indexer.models.types import (
-    IUtxoScriptPubKey,
     IUtxoVinTransaction,
-    IUtxoVinTransactionExtended,
     IUtxoVoutTransaction,
 )
 
@@ -12,14 +10,13 @@ from utxo_indexer.models.types import (
 class AbstractTransactionOutput(models.Model):
     n = models.PositiveIntegerField(db_column="n")
     # currently total circulating supply fits in 20 digits
-    # value = models.DecimalField(max_digits=22, decimal_places=8, db_column="value")
     value = models.CharField(db_column="value")
 
     script_key_asm = models.CharField(db_column="scriptKeyAsm")
     script_key_hex = models.CharField(db_column="scriptKeyHex")
-    script_key_req_sigs = models.CharField(blank=True, null=True, db_column="scriptKeyReqSigs")  # ignore: DJ001
+    script_key_req_sigs = models.CharField(blank=True, null=True, db_column="scriptKeyReqSigs")
     script_key_type = models.CharField(db_column="scriptKeyType")
-    script_key_address = models.CharField(max_length=64, db_column="scriptKeyAddress")
+    script_key_address = models.CharField(max_length=128, db_column="scriptKeyAddress")
 
     class Meta:
         abstract = True
@@ -27,18 +24,6 @@ class AbstractTransactionOutput(models.Model):
 
     def __str__(self) -> str:
         return super().__str__()
-
-    def to_vout_response(self) -> IUtxoVoutTransaction:
-        print(self.value)
-        script_pub_key: IUtxoScriptPubKey = {
-            "asm": self.script_key_asm,
-            "hex": self.script_key_hex,
-            "type": self.script_key_type,
-            "address": self.script_key_address,
-        }
-        if self.script_key_req_sigs:
-            script_pub_key["reqSigs"] = self.script_key_req_sigs
-        return {"value": 0, "n": self.n, "scriptPubKey": script_pub_key}
 
 
 class TransactionOutput(AbstractTransactionOutput):
@@ -55,7 +40,7 @@ class TransactionOutput(AbstractTransactionOutput):
         script_pub_key = response["scriptPubKey"]
         if "address" in script_pub_key:
             address = script_pub_key["address"]
-        if "addresses" in script_pub_key:
+        elif "addresses" in script_pub_key:
             address = script_pub_key["addresses"][0]
         else:
             address = ""
@@ -96,12 +81,6 @@ class TransactionInputCoinbase(models.Model):
         else:
             raise Exception("Not a coinbase transaction")
 
-    def to_vin_response(self) -> IUtxoVinTransaction:
-        return {
-            "coinbase": self.vin_coinbase,
-            "sequence": self.vin_sequence,
-        }
-
 
 class TransactionInput(AbstractTransactionOutput):
     transaction_link = models.ForeignKey("UtxoTransaction", on_delete=models.CASCADE)
@@ -111,8 +90,9 @@ class TransactionInput(AbstractTransactionOutput):
 
     vin_previous_txid = HexString32ByteField(db_column="vinPreviousTxid")
     vin_vout_index = models.PositiveIntegerField(db_column="vinVoutIndex")
-    vin_sequence = models.PositiveBigIntegerField(db_column="vinSequence")
 
+    # TODO: remove if not used
+    vin_sequence = models.PositiveBigIntegerField(db_column="vinSequence")
     vin_script_sig_asm = models.CharField(db_column="vinScriptSigAsm")
     vin_script_sig_hex = models.CharField(db_column="vinScriptSigHex")
 
@@ -122,23 +102,8 @@ class TransactionInput(AbstractTransactionOutput):
         unique_together = (("transaction_link", "vin_n"),)
         # TODO: n and vin_vout_index should be the same
 
-    def to_vin_response(self) -> IUtxoVinTransactionExtended:
-        prevout = self.to_vout_response()
-        # TODO: other fields should be all defined for non-coinbase transactions
-        assert self.vin_previous_txid is not None
-        assert self.vin_vout_index is not None
-        assert self.vin_script_sig_asm is not None
-        assert self.vin_script_sig_hex is not None
-        return {
-            "txid": self.vin_previous_txid,
-            "vout": self.vin_vout_index,
-            "scriptSig": {
-                "asm": self.vin_script_sig_asm,
-                "hex": self.vin_script_sig_hex,
-            },
-            "sequence": self.vin_sequence,
-            "prevout": prevout,
-        }
+    def __str__(self) -> str:
+        return f"Input {self.vin_n} for tx: {self.transaction_link.transaction_id}"
 
     @classmethod
     def object_from_node_response(
@@ -151,7 +116,7 @@ class TransactionInput(AbstractTransactionOutput):
         vout_script_pub_key = vout_response["scriptPubKey"]
         if "address" in vout_script_pub_key:
             address = vout_script_pub_key["address"]
-        if "addresses" in vout_script_pub_key:
+        elif "addresses" in vout_script_pub_key:
             address = vout_script_pub_key["addresses"][0]
         else:
             address = ""

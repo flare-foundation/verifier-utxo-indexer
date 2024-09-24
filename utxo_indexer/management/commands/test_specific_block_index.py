@@ -12,7 +12,7 @@ class Command(BaseCommand):
         # indexer.process_block(4738722)
         # print("Out: ", time.time() - start)
 
-        index_blocks = [2947958]  # // 2947814, 2947958
+        index_blocks = [2648059]  # // 2947814, 2947958, 2648059
         for block in index_blocks:
             print(f"indexing block {block}")
 
