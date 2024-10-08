@@ -10,8 +10,12 @@ class BtcClient:
     Implements BTC
     """
 
-    def __init__(self) -> None:
-        self.url = config.NODE_RPC_URL
+    @classmethod
+    def default(cls):
+        return cls(config.NODE_RPC_URL)
+
+    def __init__(self, rpc_url) -> None:
+        self.url = rpc_url
 
     def _post(self, session: Session, json=None):
         return session.post(self.url, json=json, timeout=20)

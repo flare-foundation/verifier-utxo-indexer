@@ -95,7 +95,7 @@ def process_pre_vout_transaction(
 class DogeIndexerClient(IndexerClient):
     @classmethod
     def default(cls):
-        return cls(DogeClient(), 60)
+        return cls.new(DogeClient.default(), 60)
 
     # Block processing part
     def process_block(self, block_height: int):

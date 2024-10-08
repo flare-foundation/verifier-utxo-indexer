@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class BtcIndexerClient(IndexerClient):
     @classmethod
     def default(cls):
-        return cls(BtcClient(), 600)
+        return cls.new(BtcClient.default(), 600)
 
     # Block processing part
     def process_block(self, block_height: int):

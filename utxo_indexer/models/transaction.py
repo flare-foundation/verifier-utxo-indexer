@@ -4,10 +4,14 @@ from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
 from utxo_indexer.models.types import ITransactionResponse
-from utxo_indexer.utils import is_valid_bytes_32_hex
+from utxo_indexer.utils import WordToOpcode, is_valid_bytes_32_hex
 
 if TYPE_CHECKING:
-    from utxo_indexer.models import TransactionInput, TransactionInputCoinbase, TransactionOutput
+    from utxo_indexer.models import (
+        TransactionInput,
+        TransactionInputCoinbase,
+        TransactionOutput,
+    )
 
 ZERO_REFERENCE = "0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -82,13 +86,20 @@ class UtxoTransaction(models.Model):
             )
 
         std_references = []
+        op_return_id = hex(WordToOpcode.OP_RETURN.value)[2:]
 
         for vout in response["vout"]:
             if is_op_return(vout):
-                # TODO: make it more bullet proof
-                reference = vout["scriptPubKey"]["asm"].split(" ")[1]
-                if is_valid_bytes_32_hex(reference):
-                    std_references.append(reference)
+                data = vout["scriptPubKey"]["hex"]
+                if len(data) < 2:
+                    continue
+                if data[:2] == op_return_id:
+                    if len(data) < 4:
+                        continue
+                    # TODO: test if len can be more than 2**32 (4 bytes)
+                    message = data[4:]
+                    if is_valid_bytes_32_hex(message):
+                        std_references.append(message)
 
         if len(std_references) == 1:
             return std_references[0]

@@ -1,11 +1,14 @@
 import logging
 import time
+import typing
 from typing import Any
 
 from requests.models import HTTPBasicAuth
 from requests.sessions import Session
 
+from client import BtcClient, DogeClient
 from configuration.config import config
+from configuration.types import Config
 from utxo_indexer.models import (
     TipSyncState,
     TipSyncStateChoices,
@@ -17,9 +20,9 @@ from .decorators import retry
 logger = logging.getLogger(__name__)
 
 
-def new_session():
+def new_session(local_config: Config) -> Session:
     session = Session()
-    session.auth = HTTPBasicAuth(config.AUTH_USERNAME, config.AUTH_PASSWORD)
+    session.auth = HTTPBasicAuth(local_config.AUTH_USERNAME, local_config.AUTH_PASSWORD)
     return session
 
 
@@ -30,10 +33,17 @@ class IndexerClient:
     - Expected production: expected time for block production of the chain (60 for DOGE, 600 for BTC)
     """
 
-    def __init__(self, client, expected_production) -> None:
-        self._client = client
+    @classmethod
+    def new(cls, client: typing.Union[DogeClient, BtcClient], expected_production: int) -> "IndexerClient":
+        return cls(client, expected_production, config)
 
-        self.workers = [new_session() for _ in range(config.NUMBER_OF_WORKERS)]
+    def __init__(
+        self, client: typing.Union[DogeClient, BtcClient], expected_production: int, instance_config: Config
+    ) -> None:
+        self._client = client
+        self.instance_config = instance_config
+
+        self.workers = [new_session(instance_config) for _ in range(instance_config.NUMBER_OF_WORKERS)]
         self.toplevel_worker = self.workers[0]
 
         assert expected_production > 0, "Expected block production time should be positive"
@@ -52,9 +62,9 @@ class IndexerClient:
 
         latest_block = UtxoBlock.objects.order_by("block_number").last()
         if latest_block is not None:
-            if latest_block.block_number < config.INITIAL_BLOCK_HEIGHT:
+            if latest_block.block_number < self.instance_config.INITIAL_BLOCK_HEIGHT:
                 raise Exception(
-                    f"Starting processing from block {config.INITIAL_BLOCK_HEIGHT}"
+                    f"Starting processing from block {self.instance_config.INITIAL_BLOCK_HEIGHT}"
                     f" with latest block in db: {latest_block.block_number} would"
                     " create holes in the transaction history"
                 )
@@ -64,26 +74,26 @@ class IndexerClient:
 
         height = self._get_current_block_height(self.toplevel_worker)
 
-        if config.PRUNE_KEEP_DAYS <= 0:
+        if self.instance_config.PRUNE_KEEP_DAYS <= 0:
             logger.info(
-                f"Pruning is disabled, starting from the initial block height set in config {config.INITIAL_BLOCK_HEIGHT}"
+                f"Pruning is disabled, starting from the initial block height set in config {self.instance_config.INITIAL_BLOCK_HEIGHT}"
             )
-            return config.INITIAL_BLOCK_HEIGHT
+            return self.instance_config.INITIAL_BLOCK_HEIGHT
 
         safety_factor = 1.5
         blocks_since_pruning = int(
-            config.PRUNE_KEEP_DAYS * 24 * 60 * 60 * safety_factor / self.expected_block_production_time
+            self.instance_config.PRUNE_KEEP_DAYS * 24 * 60 * 60 * safety_factor / self.expected_block_production_time
         )
 
-        if config.INITIAL_BLOCK_HEIGHT < height - blocks_since_pruning:
+        if self.instance_config.INITIAL_BLOCK_HEIGHT < height - blocks_since_pruning:
             logger.info(
                 f"Initial block is much older than pruning setting, starting from block {height - blocks_since_pruning} \n"
-                f"Initial block height set: {config.INITIAL_BLOCK_HEIGHT}, pruning setting: {config.PRUNE_KEEP_DAYS} days with factor: {safety_factor}"
+                f"Initial block height set: {self.instance_config.INITIAL_BLOCK_HEIGHT}, pruning setting: {self.instance_config.PRUNE_KEEP_DAYS} days with factor: {safety_factor}"
             )
             return height - blocks_since_pruning
 
-        logger.info(f"Starting from the initial block height set in config {config.INITIAL_BLOCK_HEIGHT}")
-        return config.INITIAL_BLOCK_HEIGHT
+        logger.info(f"Starting from the initial block height set in config {self.instance_config.INITIAL_BLOCK_HEIGHT}")
+        return self.instance_config.INITIAL_BLOCK_HEIGHT
 
     def run(self) -> None:
         """
@@ -97,7 +107,10 @@ class IndexerClient:
                 # We need to update the tip state and process new blocks
                 self.update_tip_state_indexing(height)
                 self.latest_tip_block_height = height
-                for i in range(self.latest_indexed_block_height + 1, height - config.NUMBER_OF_BLOCK_CONFIRMATIONS + 1):
+                for i in range(
+                    self.latest_indexed_block_height + 1,
+                    height - self.instance_config.NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+                ):
                     start = time.time()
                     self.process_block(i)
                     logger.info("Processed block: %s in: %s", i, time.time() - start)
@@ -106,17 +119,19 @@ class IndexerClient:
                 # TODO save all blocks up to tip height
             else:
                 logger.info(
-                    f"No new blocks to process, indexed/latest: {self.latest_indexed_block_height}/{height} sleeping for {config.INDEXER_POLL_INTERVAL} seconds"
+                    f"No new blocks to process, indexed/latest: {self.latest_indexed_block_height}/{height} sleeping for {self.instance_config.INDEXER_POLL_INTERVAL} seconds"
                 )
                 self.update_tip_state_idle()
-                time.sleep(config.INDEXER_POLL_INTERVAL)
+                time.sleep(self.instance_config.INDEXER_POLL_INTERVAL)
 
     # Base methods for interacting with node directly
 
     # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_current_block_height(self, worker: Session) -> int:
-        return self._client.get_block_height(worker).json(parse_float=str)["result"]
+        res = self._client.get_block_height(worker)
+        return res.json(parse_float=str)["result"]
+        # return self._client.get_block_height(worker).json(parse_float=str)["result"]
 
     # TODO:(matej) retry only on possible exceptions
     @retry(5)

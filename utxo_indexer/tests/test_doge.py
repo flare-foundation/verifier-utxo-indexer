@@ -1,7 +1,10 @@
+import logging
 from typing import Any
 
 from django.test import TestCase
 
+from client.doge_client import DogeClient
+from configuration.config import get_testing_config
 from utxo_indexer.indexer import DogeIndexerClient
 from utxo_indexer.models import (
     TransactionInput,
@@ -14,6 +17,7 @@ from utxo_indexer.models.transaction import ZERO_REFERENCE
 
 # Note that all of the tests are using the DOGE mainnet blockchain.
 # See the .env.example file for the configuration.
+# SOURCE_NAME=doge
 # NODE_RPC_URL=url
 # AUTH_USERNAME=user
 # AUTH_PASSWORD=password
@@ -24,10 +28,15 @@ from utxo_indexer.models.transaction import ZERO_REFERENCE
 # or
 # coverage run manage.py test
 
+# DISABLE LOGGING
+logging.disable(logging.CRITICAL)
+
 
 class IndexingBlockWorkingTest(TestCase):
     def setUp(self):
-        self.indexer = DogeIndexerClient.default()
+        config = get_testing_config("DOGE", "doge")
+        client = DogeClient(config.NODE_RPC_URL)
+        self.indexer = DogeIndexerClient(client, 60, config)
 
     def test_should_index_block(self):
         """Testing indexing for block 4855034"""
@@ -80,7 +89,9 @@ class IndexingBlockWorkingTest(TestCase):
 
 class TransactionLogicTest(TestCase):
     def setUp(self, **kwargs: Any) -> Any:
-        self.indexer = DogeIndexerClient.default()
+        config = get_testing_config("DOGE", "doge")
+        client = DogeClient(config.NODE_RPC_URL)
+        self.indexer = DogeIndexerClient(client, 60, config)
         self.indexer.process_block(4994995)
 
     def test_should_index_block(self):
@@ -210,7 +221,3 @@ class TransactionLogicTest(TestCase):
         self.assertEqual(input_1.vin_n, 1)
         self.assertEqual(input_1.script_key_address, "DJ7YAd617uFLUoVG7LzJbbk4EZMRCNxkTq")
         self.assertEqual(input_1.value, "0.00100001")
-
-    def test_payment_reference_extracted(self):
-        # tx_id = "e0cc82dc9606efb224f1ecb5c06cdbc6cf511ad487089080f1edd18a61d342d6"
-        pass
