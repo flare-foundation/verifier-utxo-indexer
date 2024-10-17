@@ -42,8 +42,7 @@ class BtcIndexerClient(IndexerClient):
             tx_link = UtxoTransaction.object_from_node_response(tx, block_info.block_num, block_info.block_ts)
             processed_blocks.tx.append(tx_link)
             for vin_n, vin in enumerate(tx["vin"]):
-                if "txid" not in vin or "vout" not in vin:
-                    # Only coinbase transactions have no txid
+                if "coinbase" in vin:
                     processed_blocks.vins_cb.append(
                         TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
                     )

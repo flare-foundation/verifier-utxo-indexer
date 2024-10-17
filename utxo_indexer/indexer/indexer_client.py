@@ -45,7 +45,6 @@ class IndexerClient:
 
         self.workers = [new_session(instance_config) for _ in range(instance_config.NUMBER_OF_WORKERS)]
         self.toplevel_worker = self.workers[0]
-
         assert expected_production > 0, "Expected block production time should be positive"
         self.expected_block_production_time = expected_production
 
@@ -72,8 +71,6 @@ class IndexerClient:
 
         logger.info("No blocks in the database, starting from the initial block height")
 
-        height = self._get_current_block_height(self.toplevel_worker)
-
         if self.instance_config.PRUNE_KEEP_DAYS <= 0:
             logger.info(
                 f"Pruning is disabled, starting from the initial block height set in config {self.instance_config.INITIAL_BLOCK_HEIGHT}"
@@ -84,6 +81,8 @@ class IndexerClient:
         blocks_since_pruning = int(
             self.instance_config.PRUNE_KEEP_DAYS * 24 * 60 * 60 * safety_factor / self.expected_block_production_time
         )
+
+        height = self._get_current_block_height(self.toplevel_worker)
 
         if self.instance_config.INITIAL_BLOCK_HEIGHT < height - blocks_since_pruning:
             logger.info(
@@ -148,7 +147,10 @@ class IndexerClient:
     # TODO: type hint (ITransactionResponse)
     @retry(5)
     def _get_transaction(self, txid: str, worker: Session) -> Any:
-        return self._client.get_transaction(worker, txid).json(parse_float=str)["result"]
+        if isinstance(self._client, BtcClient):
+            raise AssertionError
+        else:
+            return self._client.get_transaction(worker, txid).json(parse_float=str)["result"]
 
     # Tip state management
     def update_tip_state_indexing(self, block_tip_height: int):

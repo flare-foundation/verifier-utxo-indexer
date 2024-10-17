@@ -49,8 +49,8 @@ class UtxoTransaction(models.Model):
 
     @classmethod
     def object_from_node_response(cls, response: ITransactionResponse, block_number: int, timestamp: int):
-        ref = cls.__extract_payment_reference(response)
-        is_coinbase = cls.__is_coinbase_transaction(response)
+        ref = cls._extract_payment_reference(response)
+        is_coinbase = cls._is_coinbase_transaction(response)
         if is_coinbase:
             return cls(
                 block_number=block_number,
@@ -70,14 +70,14 @@ class UtxoTransaction(models.Model):
         )
 
     @staticmethod
-    def __is_coinbase_transaction(response: ITransactionResponse):
+    def _is_coinbase_transaction(response: ITransactionResponse):
         for vin in response["vin"]:
             if "coinbase" in vin:
                 return True
         return False
 
     @staticmethod
-    def __extract_payment_reference(response: ITransactionResponse):
+    def _extract_payment_reference(response: ITransactionResponse):
         def is_op_return(vout):
             return (
                 "scriptPubKey" in vout

@@ -121,21 +121,14 @@ class TransactionInput(AbstractTransactionOutput):
         else:
             address = ""
 
-        if "coinbase" in vin_response:
-            # TODO: create object TransactionInputCoinbase
-            vin_response["coinbase"]
-            original_txid = None
-            vout_index = None
-            script_sig_asm = None
-            script_sig_hex = None
-        else:
-            assert "txid" in vin_response
-            assert "vout" in vin_response
-            assert "scriptSig" in vin_response
-            original_txid = vin_response["txid"]
-            vout_index = vin_response["vout"]
-            script_sig_asm = vin_response["scriptSig"]["asm"]
-            script_sig_hex = vin_response["scriptSig"]["hex"]
+        assert "coinbase" not in vin_response
+        assert "txid" in vin_response
+        assert "vout" in vin_response
+        assert "scriptSig" in vin_response
+        original_txid = vin_response["txid"]
+        vout_index = vin_response["vout"]
+        script_sig_asm = vin_response["scriptSig"]["asm"]
+        script_sig_hex = vin_response["scriptSig"]["hex"]
 
         return cls(
             transaction_link_id=transaction_link_id,

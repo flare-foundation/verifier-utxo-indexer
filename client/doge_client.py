@@ -53,10 +53,7 @@ class DogeClient:
             },
         )
 
-    def get_block_height(
-        self,
-        session: Session,
-    ):
+    def get_block_height(self, session: Session):
         return self._post(
             session,
             {

@@ -20,17 +20,6 @@ class BtcClient:
     def _post(self, session: Session, json=None):
         return session.post(self.url, json=json, timeout=20)
 
-    def get_transaction(self, session: Session, txid: str):
-        return self._post(
-            session,
-            {
-                "jsonrpc": "1.0",
-                "id": "rpc",
-                "method": "getrawtransaction",
-                "params": [txid, 2],
-            },
-        )
-
     def get_block_by_hash(self, session: Session, block_hash: str):
         return self._post(
             session,
@@ -53,10 +42,7 @@ class BtcClient:
             },
         )
 
-    def get_block_height(
-        self,
-        session: Session,
-    ):
+    def get_block_height(self, session: Session):
         return self._post(
             session,
             {
