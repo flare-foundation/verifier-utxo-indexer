@@ -1,8 +1,8 @@
+import cattrs
 from requests.sessions import Session
 
 from configuration.config import config
-
-# TODO: Add type hints
+from utxo_indexer.models.types import BlockResponse, TransactionResponse
 
 
 class DogeClient:
@@ -20,8 +20,23 @@ class DogeClient:
     def _post(self, session: Session, json=None):
         return session.post(self.url, json=json, timeout=20)
 
-    def get_transaction(self, session: Session, txid: str):
-        return self._post(
+    def _check_adress_reqSigs_prevout(self, tx):
+        """Makes sure that adress, reqSigs and prevout are correct"""
+        for vin in tx["vin"]:
+            if "coinbase" not in vin:
+                vin["prevout"] = None
+        for vout in tx["vout"]:
+            scriptPubKey = vout["scriptPubKey"]
+            scriptPubKey.setdefault("reqSigs")
+            if "addresses" in scriptPubKey and len(scriptPubKey["addresses"]) > 0:
+                scriptPubKey["address"] = scriptPubKey["addresses"][0]
+            else:
+                scriptPubKey.setdefault("address", "")
+        return tx
+
+    def get_transaction(self, session: Session, txid: str) -> TransactionResponse:
+        """Returns a transaction presented with class types."""
+        tx = self._post(
             session,
             {
                 "jsonrpc": "1.0",
@@ -29,21 +44,31 @@ class DogeClient:
                 "method": "getrawtransaction",
                 "params": [txid, True],
             },
-        )
+        ).json(parse_float=str)["result"]
 
-    def get_block_by_hash(self, session: Session, block_hash: str):
-        return self._post(
+        # Handle address, reqSigs and prevout
+        tx = self._check_adress_reqSigs_prevout(tx)
+        return cattrs.structure(tx, TransactionResponse)
+
+    def get_block_by_hash(self, session: Session, block_hash: str) -> BlockResponse:
+        """Returns a block presented with class types."""
+        block = self._post(
             session,
             {
                 "jsonrpc": "1.0",
                 "id": "rpc",
                 "method": "getblock",
-                "params": [block_hash, True],
+                "params": [block_hash, 2],
             },
-        )
+        ).json(parse_float=str)["result"]
 
-    def get_block_hash_from_height(self, session: Session, block_height: int):
-        return self._post(
+        # Handle address, reqSigs and prevout
+        for tx in block["tx"]:
+            tx = self._check_adress_reqSigs_prevout(tx)
+        return cattrs.structure(block, BlockResponse)
+
+    def get_block_hash_from_height(self, session: Session, block_height: int) -> str:
+        hash = self._post(
             session,
             {
                 "jsonrpc": "1.0",
@@ -51,10 +76,11 @@ class DogeClient:
                 "method": "getblockhash",
                 "params": [block_height],
             },
-        )
+        ).json(parse_float=str)["result"]
+        return hash
 
-    def get_block_height(self, session: Session):
-        return self._post(
+    def get_block_height(self, session: Session) -> int:
+        height = self._post(
             session,
             {
                 "jsonrpc": "1.0",
@@ -62,4 +88,5 @@ class DogeClient:
                 "method": "getblockcount",
                 "params": [],
             },
-        )
+        ).json(parse_float=str)["result"]
+        return height

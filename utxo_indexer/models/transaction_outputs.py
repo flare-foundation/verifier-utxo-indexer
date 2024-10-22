@@ -1,10 +1,7 @@
 from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
-from utxo_indexer.models.types import (
-    IUtxoVinTransaction,
-    IUtxoVoutTransaction,
-)
+from utxo_indexer.models.types import CoinbaseVinResponse, VinResponse, VoutResponse
 
 
 class AbstractTransactionOutput(models.Model):
@@ -36,23 +33,17 @@ class TransactionOutput(AbstractTransactionOutput):
         return super().__str__()
 
     @classmethod
-    def object_from_node_response(cls, response: IUtxoVoutTransaction, transaction_link_id: str):
-        script_pub_key = response["scriptPubKey"]
-        if "address" in script_pub_key:
-            address = script_pub_key["address"]
-        elif "addresses" in script_pub_key:
-            address = script_pub_key["addresses"][0]
-        else:
-            address = ""
+    def object_from_node_response(cls, response: VoutResponse, transaction_link_id: str):
+        script_pub_key = response.scriptPubKey
         return cls(
             transaction_link_id=transaction_link_id,
-            n=response["n"],
-            value=response["value"],
-            script_key_asm=script_pub_key["asm"],
-            script_key_hex=script_pub_key["hex"],
-            script_key_req_sigs=script_pub_key.get("reqSigs"),
-            script_key_type=script_pub_key["type"],
-            script_key_address=address,
+            n=response.n,
+            value=response.value,
+            script_key_asm=script_pub_key.asm,
+            script_key_hex=script_pub_key.hex,
+            script_key_req_sigs=script_pub_key.reqSigs,
+            script_key_type=script_pub_key.type,
+            script_key_address=script_pub_key.address,
         )
 
 
@@ -69,17 +60,14 @@ class TransactionInputCoinbase(models.Model):
         return f"Coinbase vin for tx: {self.transaction_link.transaction_id}"
 
     @classmethod
-    def object_from_node_response(cls, vin_n: int, vin_response: IUtxoVinTransaction, transaction_link_id: str):
+    def object_from_node_response(cls, vin_n: int, vin_response: CoinbaseVinResponse, transaction_link_id: str):
         assert vin_n == 0, "Coinbase transaction should always be first in vin array"
-        if "coinbase" in vin_response:
-            return cls(
-                transaction_link_id=transaction_link_id,
-                vin_n=vin_n,
-                vin_coinbase=vin_response["coinbase"],
-                vin_sequence=vin_response["sequence"],
-            )
-        else:
-            raise Exception("Not a coinbase transaction")
+        return cls(
+            transaction_link_id=transaction_link_id,
+            vin_n=vin_n,
+            vin_coinbase=vin_response.coinbase,
+            vin_sequence=vin_response.sequence,
+        )
 
 
 class TransactionInput(AbstractTransactionOutput):
@@ -109,42 +97,26 @@ class TransactionInput(AbstractTransactionOutput):
     def object_from_node_response(
         cls,
         vin_n: int,
-        vin_response: IUtxoVinTransaction,
-        vout_response: IUtxoVoutTransaction,
+        vin_response: VinResponse,
+        vout_response: VoutResponse,
         transaction_link_id: str,
     ):
-        vout_script_pub_key = vout_response["scriptPubKey"]
-        if "address" in vout_script_pub_key:
-            address = vout_script_pub_key["address"]
-        elif "addresses" in vout_script_pub_key:
-            address = vout_script_pub_key["addresses"][0]
-        else:
-            address = ""
-
-        assert "coinbase" not in vin_response
-        assert "txid" in vin_response
-        assert "vout" in vin_response
-        assert "scriptSig" in vin_response
-        original_txid = vin_response["txid"]
-        vout_index = vin_response["vout"]
-        script_sig_asm = vin_response["scriptSig"]["asm"]
-        script_sig_hex = vin_response["scriptSig"]["hex"]
-
+        vout_script_pub_key = vout_response.scriptPubKey
         return cls(
             transaction_link_id=transaction_link_id,
             vin_n=vin_n,
             # (pre)vout part
-            n=vout_response["n"],
-            value=vout_response["value"],
-            script_key_asm=vout_script_pub_key["asm"],
-            script_key_hex=vout_script_pub_key["hex"],
-            script_key_req_sigs=vout_script_pub_key.get("reqSigs"),
-            script_key_type=vout_script_pub_key["type"],
-            script_key_address=address,
+            n=vout_response.n,
+            value=vout_response.value,
+            script_key_asm=vout_script_pub_key.asm,
+            script_key_hex=vout_script_pub_key.hex,
+            script_key_req_sigs=vout_script_pub_key.reqSigs,
+            script_key_type=vout_script_pub_key.type,
+            script_key_address=vout_script_pub_key.address,
             # vin part
-            vin_previous_txid=original_txid,
-            vin_vout_index=vout_index,
-            vin_sequence=vin_response["sequence"],
-            vin_script_sig_asm=script_sig_asm,
-            vin_script_sig_hex=script_sig_hex,
+            vin_previous_txid=vin_response.txid,
+            vin_vout_index=vin_response.vout,
+            vin_sequence=vin_response.sequence,
+            vin_script_sig_asm=vin_response.scriptSig.asm,
+            vin_script_sig_hex=vin_response.scriptSig.hex,
         )

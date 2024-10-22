@@ -1,7 +1,7 @@
 from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
-from utxo_indexer.models.types import IBlockResponse
+from utxo_indexer.models.types import BlockResponse
 
 
 class UtxoBlock(models.Model):
@@ -27,12 +27,12 @@ class UtxoBlock(models.Model):
         return f"Block {self.block_number} : {self.block_hash}"
 
     @classmethod
-    def object_from_node_response(cls, response: IBlockResponse):
+    def object_from_node_response(cls, response: BlockResponse):
         return cls(
-            block_number=response["height"],
-            timestamp=response["mediantime"],
-            block_hash=response["hash"],
-            previous_block_hash=response["previousblockhash"],
-            transactions=len(response["tx"]),
+            block_number=response.height,
+            timestamp=response.mediantime,
+            block_hash=response.hash,
+            previous_block_hash=response.previousblockhash,
+            transactions=len(response.tx),
             confirmed=True,
         )

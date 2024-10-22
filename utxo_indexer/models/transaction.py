@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
-from utxo_indexer.models.types import ITransactionResponse
+from utxo_indexer.models.types import CoinbaseVinResponse, TransactionResponse, VoutResponse
 from utxo_indexer.utils import WordToOpcode, is_valid_bytes_32_hex
 
 if TYPE_CHECKING:
@@ -48,14 +48,14 @@ class UtxoTransaction(models.Model):
         return f"Transaction {self.transaction_id} in block : {self.block_number}"
 
     @classmethod
-    def object_from_node_response(cls, response: ITransactionResponse, block_number: int, timestamp: int):
+    def object_from_node_response(cls, response: TransactionResponse, block_number: int, timestamp: int):
         ref = cls._extract_payment_reference(response)
         is_coinbase = cls._is_coinbase_transaction(response)
         if is_coinbase:
             return cls(
                 block_number=block_number,
                 timestamp=timestamp,
-                transaction_id=response["txid"],
+                transaction_id=response.txid,
                 payment_reference=ZERO_REFERENCE,
                 is_native_payment=False,
                 transaction_type="coinbase",
@@ -63,34 +63,30 @@ class UtxoTransaction(models.Model):
         return cls(
             block_number=block_number,
             timestamp=timestamp,
-            transaction_id=response["txid"],
+            transaction_id=response.txid,
             payment_reference=ref,
             is_native_payment=True,
             transaction_type="full_payment",
         )
 
     @staticmethod
-    def _is_coinbase_transaction(response: ITransactionResponse):
-        for vin in response["vin"]:
-            if "coinbase" in vin:
+    def _is_coinbase_transaction(response: TransactionResponse):
+        for vin in response.vin:
+            if isinstance(vin, CoinbaseVinResponse):
                 return True
         return False
 
     @staticmethod
-    def _extract_payment_reference(response: ITransactionResponse):
-        def is_op_return(vout):
-            return (
-                "scriptPubKey" in vout
-                and "asm" in vout["scriptPubKey"]
-                and vout["scriptPubKey"]["asm"].startswith("OP_RETURN")
-            )
+    def _extract_payment_reference(response: TransactionResponse):
+        def is_op_return(vout: VoutResponse):
+            return vout.scriptPubKey.asm.startswith("OP_RETURN")
 
         std_references = []
         op_return_id = hex(WordToOpcode.OP_RETURN.value)[2:]
 
-        for vout in response["vout"]:
+        for vout in response.vout:
             if is_op_return(vout):
-                data = vout["scriptPubKey"]["hex"]
+                data = vout.scriptPubKey.hex
                 if len(data) < 2:
                     continue
                 if data[:2] == op_return_id:

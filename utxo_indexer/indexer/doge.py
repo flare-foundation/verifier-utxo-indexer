@@ -1,13 +1,12 @@
 import logging
-import queue
 import threading
+from queue import Queue
 from typing import Callable
 
 from django.db import transaction
 from requests.sessions import Session
 
 from client import DogeClient
-from configuration.config import config
 from utxo_indexer.models import (
     TransactionInput,
     TransactionInputCoinbase,
@@ -15,15 +14,16 @@ from utxo_indexer.models import (
     UtxoBlock,
     UtxoTransaction,
 )
-from utxo_indexer.models.types import IUtxoVinTransaction
+from utxo_indexer.models.types import CoinbaseVinResponse, TransactionResponse, VinResponse
 
+from .decorators import retry
 from .indexer_client import IndexerClient
 from .types import BlockInformationPassing, BlockProcessorMemory
 
 logger = logging.getLogger(__name__)
 
 
-def thread_worker(session: Session, process_queue: queue.Queue, processed_block: BlockProcessorMemory):
+def thread_worker(session: Session, process_queue: Queue, processed_block: BlockProcessorMemory):
     while not process_queue.empty():
         item = process_queue.get()
         if callable(item):
@@ -32,43 +32,11 @@ def thread_worker(session: Session, process_queue: queue.Queue, processed_block:
             raise Exception("Item in queue is not callable")
 
 
-def process_toplevel_transaction(
-    process_queue: queue.Queue,
-    txid: str,
-    block_info: BlockInformationPassing,
-    transaction_getter: Callable,
-):
-    """Return the function that processes each individual transaction and fills the processing queue with all necessary additional tasks this creates
-
-    Args:
-        process_queue (queue.Queue): a queue that is shared between all workers and contains all the tasks that need to be processed
-        txid (str): transaction id to process
-        block_num (int): information about block number this transaction is a part of
-        block_ts (int): information about block timestamp this transaction is a part of
-    """
-
-    def _process_toplevel_transaction(session: Session, processed_block: BlockProcessorMemory):
-        res = transaction_getter(txid, session)
-
-        tx_link = UtxoTransaction.object_from_node_response(res, block_info.block_num, block_info.block_ts)
-        processed_block.tx.append(tx_link)
-
-        for ind, vin in enumerate(res["vin"]):
-            process_queue.put(process_pre_vout_transaction(vin, ind, tx_link.transaction_id, transaction_getter))
-
-        for vout in res["vout"]:
-            processed_block.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link.transaction_id))
-
-        return True
-
-    return _process_toplevel_transaction
-
-
 def process_pre_vout_transaction(
-    vin: IUtxoVinTransaction,
+    vin: VinResponse,
     vin_n: int,
     tx_link: str,
-    transaction_getter: Callable,
+    transaction_getter: Callable[[str, Session], TransactionResponse],
 ):
     """Return the function that processes the transaction prevouts and link it to the spending transaction
 
@@ -79,13 +47,9 @@ def process_pre_vout_transaction(
     """
 
     def _process_pre_vout_transaction(session: Session, processed_block: BlockProcessorMemory):
-        if "txid" not in vin or "vout" not in vin:
-            # Only coinbase transactions have no txid
-            processed_block.vins_cb.append(TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link))
-            return True
-        txid, vout_n = vin["txid"], vin["vout"]
+        txid, vout_n = vin.txid, vin.vout
         res = transaction_getter(txid, session)
-        prevout_res = res["vout"][vout_n]
+        prevout_res = res.vout[vout_n]
         processed_block.vins.append(TransactionInput.object_from_node_response(vin_n, vin, prevout_res, tx_link))
         return True
 
@@ -93,38 +57,56 @@ def process_pre_vout_transaction(
 
 
 class DogeIndexerClient(IndexerClient):
+    _client: DogeClient
+
     @classmethod
     def default(cls):
         return cls.new(DogeClient.default(), 60)
+
+    # TODO:(matej) retry only on possible exceptions
+    @retry(5)
+    def _get_transaction(self, txid: str, worker: Session) -> TransactionResponse:
+        return self._client.get_transaction(worker, txid)
 
     # Block processing part
     def process_block(self, block_height: int):
         # NOTICE: we always assume that block processing is for blocks that are for sure on main branch of the blockchain
 
         processed_blocks = BlockProcessorMemory()
-        process_queue: queue.Queue = queue.Queue()
+        process_queue: Queue = Queue()
 
         block_hash = self._get_block_hash_from_height(block_height, self.toplevel_worker)
         res_block = self._get_block_by_hash(block_hash, self.toplevel_worker)
-
-        tx_ids = res_block["tx"]
-        block_info = BlockInformationPassing(
-            block_num=res_block["height"],
-            block_ts=res_block["mediantime"],
-        )
 
         # Update the block info in DB, indicating it has processed transactions once we proceeded them
         # do it within transaction atomic update
         block_db = UtxoBlock.object_from_node_response(res_block)
 
+        block_info = BlockInformationPassing(
+            block_num=res_block.height,
+            block_ts=res_block.mediantime,
+        )
+
         # Put all of the transaction in block on the processing queue
-        for tx in tx_ids:
-            process_queue.put(process_toplevel_transaction(process_queue, tx, block_info, self._get_transaction))
+        for tx in res_block.tx:
+            tx_link = UtxoTransaction.object_from_node_response(tx, block_info.block_num, block_info.block_ts)
+            processed_blocks.tx.append(tx_link)
+            for vin_n, vin in enumerate(tx.vin):
+                if isinstance(vin, CoinbaseVinResponse):
+                    processed_blocks.vins_cb.append(
+                        TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
+                    )
+                else:
+                    process_queue.put(
+                        process_pre_vout_transaction(vin, vin_n, tx_link.transaction_id, self._get_transaction)
+                    )
+            for vout in tx.vout:
+                processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link.transaction_id))
 
         # multithreading part of the processing
         workers = []
 
-        for worker_index in range(config.NUMBER_OF_WORKERS):
+        for worker_index in range(len(self.workers)):
             t = threading.Thread(
                 target=thread_worker, args=(self.workers[worker_index], process_queue, processed_blocks)
             )

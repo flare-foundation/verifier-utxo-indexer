@@ -1,89 +1,65 @@
-from typing import List, TypedDict
+from typing import List
+
+from attrs import frozen
 
 
-# Transaction node response
-class IUtxoScriptSig(TypedDict):
+@frozen
+class ScriptSigResponse:
     asm: str
     hex: str
 
 
-class __utxoScriptPubKeyBase(TypedDict, total=False):
-    reqSigs: str
-    addresses: List[str]
+@frozen
+class ScriptPubKeyResponse:
+    reqSigs: int | None
     address: str
-
-
-class IUtxoScriptPubKey(__utxoScriptPubKeyBase):
+    type: str
     asm: str
     hex: str
-    type: str  # choices :  "witness_v0_keyhash",
 
 
-class IUtxoVoutTransaction(TypedDict):
-    value: int
+@frozen
+class PrevoutResponse:
+    value: str
+    scriptPubKey: ScriptPubKeyResponse
+
+
+@frozen
+class VoutResponse:
     n: int
-    scriptPubKey: IUtxoScriptPubKey
+    value: str
+    scriptPubKey: ScriptPubKeyResponse
 
 
-class __UtxoVinTransactionBase(TypedDict, total=False):
+@frozen
+class CoinbaseVinResponse:
     coinbase: str
-    txid: str
-    vout: int
-    scriptSig: IUtxoScriptSig
-    txinwitness: List[str]
-
-
-class IUtxoVinTransaction(__UtxoVinTransactionBase):
     sequence: int
 
 
-class IUtxoVinTransactionExtended(IUtxoVinTransaction):
-    """
-    Note that this type of response is only available for BTC, we want to be able to return this on DOGE indexer to be in line with BTC implementation
-    """
-
-    prevout: IUtxoVoutTransaction
-
-
-class ITransactionResponse(TypedDict):
+# Definition of VinResponse class
+@frozen
+class VinResponse:
     txid: str
+    sequence: int
+    scriptSig: ScriptSigResponse
+    vout: int
+    prevout: PrevoutResponse | None
+
+
+# Definition of TransactionResponse class
+@frozen
+class TransactionResponse:
+    txid: str
+    vout: List[VoutResponse]
+    vin: List[VinResponse | CoinbaseVinResponse]
+
+
+# Definition of BlockResponse class
+@frozen
+class BlockResponse:
     hash: str
-    version: int
-    size: int
-    vsize: int
-    weight: int
-    locktime: int
-    vin: List[IUtxoVinTransaction]
-    vout: List[IUtxoVoutTransaction]
-    hex: str
-    blockhash: str
-    confirmations: int
-    time: int
-    blocktime: int
-
-
-# Block node response
-# TODO:
-
-
-class IBlockResponse(TypedDict):
-    size: int
-    strippedsize: int
-    weight: int
-    nTx: int
-    tx: List[str]
-    hash: str
-    confirmations: int
     height: int
-    version: int
-    versionHex: str
-    merkleroot: str
-    time: int
     mediantime: int
-    nonce: int
-    bits: str
-    difficulty: int
-    chainwork: str
-    nTx: int
     previousblockhash: str
-    nextblockhash: str
+    tx: List[TransactionResponse]

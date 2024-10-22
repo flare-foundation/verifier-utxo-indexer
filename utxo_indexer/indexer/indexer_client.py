@@ -1,7 +1,6 @@
 import logging
 import time
 import typing
-from typing import Any
 
 from requests.models import HTTPBasicAuth
 from requests.sessions import Session
@@ -14,6 +13,7 @@ from utxo_indexer.models import (
     TipSyncStateChoices,
     UtxoBlock,
 )
+from utxo_indexer.models.types import BlockResponse
 
 from .decorators import retry
 
@@ -43,7 +43,12 @@ class IndexerClient:
         self._client = client
         self.instance_config = instance_config
 
-        self.workers = [new_session(instance_config) for _ in range(instance_config.NUMBER_OF_WORKERS)]
+        # BtcClient only needs one worker
+        if isinstance(self._client, BtcClient):
+            self.workers = [new_session(instance_config)]
+        else:
+            self.workers = [new_session(instance_config) for _ in range(instance_config.NUMBER_OF_WORKERS)]
+
         self.toplevel_worker = self.workers[0]
         assert expected_production > 0, "Expected block production time should be positive"
         self.expected_block_production_time = expected_production
@@ -115,7 +120,7 @@ class IndexerClient:
                     logger.info("Processed block: %s in: %s", i, time.time() - start)
                     self.latest_indexed_block_height = i
 
-                # TODO save all blocks up to tip height
+                # TODO: save all blocks up to tip height
             else:
                 logger.info(
                     f"No new blocks to process, indexed/latest: {self.latest_indexed_block_height}/{height} sleeping for {self.instance_config.INDEXER_POLL_INTERVAL} seconds"
@@ -128,29 +133,17 @@ class IndexerClient:
     # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_current_block_height(self, worker: Session) -> int:
-        res = self._client.get_block_height(worker)
-        return res.json(parse_float=str)["result"]
-        # return self._client.get_block_height(worker).json(parse_float=str)["result"]
+        return self._client.get_block_height(worker)
 
     # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_block_hash_from_height(self, block_height: int, worker: Session) -> str:
-        return self._client.get_block_hash_from_height(worker, block_height).json(parse_float=str)["result"]
+        return self._client.get_block_hash_from_height(worker, block_height)
 
     # TODO:(matej) retry only on possible exceptions
-    # TODO: type hint (IBlockResponse)
     @retry(5)
-    def _get_block_by_hash(self, block_hash: str, worker: Session) -> Any:
-        return self._client.get_block_by_hash(worker, block_hash).json(parse_float=str)["result"]
-
-    # TODO:(matej) retry only on possible exceptions
-    # TODO: type hint (ITransactionResponse)
-    @retry(5)
-    def _get_transaction(self, txid: str, worker: Session) -> Any:
-        if isinstance(self._client, BtcClient):
-            raise AssertionError
-        else:
-            return self._client.get_transaction(worker, txid).json(parse_float=str)["result"]
+    def _get_block_by_hash(self, block_hash: str, worker: Session) -> BlockResponse:
+        return self._client.get_block_by_hash(worker, block_hash)
 
     # Tip state management
     def update_tip_state_indexing(self, block_tip_height: int):

@@ -10,6 +10,7 @@ from utxo_indexer.models import (
     UtxoBlock,
     UtxoTransaction,
 )
+from utxo_indexer.models.types import CoinbaseVinResponse, PrevoutResponse, VoutResponse
 
 from .indexer_client import IndexerClient
 from .types import BlockInformationPassing, BlockProcessorMemory
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class BtcIndexerClient(IndexerClient):
+    _client = BtcClient
+
     @classmethod
     def default(cls):
         return cls.new(BtcClient.default(), 600)
@@ -34,25 +37,27 @@ class BtcIndexerClient(IndexerClient):
         block_db = UtxoBlock.object_from_node_response(res_block)
 
         block_info = BlockInformationPassing(
-            block_num=res_block["height"],
-            block_ts=res_block["mediantime"],
+            block_num=res_block.height,
+            block_ts=res_block.mediantime,
         )
-
-        for tx in res_block["tx"]:
+        for tx in res_block.tx:
             tx_link = UtxoTransaction.object_from_node_response(tx, block_info.block_num, block_info.block_ts)
             processed_blocks.tx.append(tx_link)
-            for vin_n, vin in enumerate(tx["vin"]):
-                if "coinbase" in vin:
+            for vin_n, vin in enumerate(tx.vin):
+                if isinstance(vin, CoinbaseVinResponse):
                     processed_blocks.vins_cb.append(
                         TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
                     )
                 else:
+                    assert isinstance(
+                        vin.prevout, PrevoutResponse
+                    ), "PrevoutResponse sholdn't be None for BitcoinClient"
+                    vout = VoutResponse(n=vin.vout, value=vin.prevout.value, scriptPubKey=vin.prevout.scriptPubKey)
                     processed_blocks.vins.append(
-                        TransactionInput.object_from_node_response(
-                            vin_n, vin, {"n": vin["vout"]} | vin["prevout"], tx_link.transaction_id
-                        )
+                        TransactionInput.object_from_node_response(vin_n, vin, vout, tx_link.transaction_id)
                     )
-            for vout in tx["vout"]:
+
+            for vout in tx.vout:
                 processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link.transaction_id))
 
         with transaction.atomic():
