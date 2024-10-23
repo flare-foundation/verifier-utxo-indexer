@@ -20,7 +20,7 @@ class BtcClient:
     def _post(self, session: Session, json=None):
         return session.post(self.url, json=json, timeout=20)
 
-    def _check_adress_reqSigs(self, tx):
+    def _check_address_reqSigs(self, tx):
         """Makes sure that adress, reqSigs are correct"""
         for vin in tx["vin"]:
             if "prevout" in vin:
@@ -53,7 +53,7 @@ class BtcClient:
 
         # Handle address and reqSigs
         for tx in block["tx"]:
-            tx = self._check_adress_reqSigs(tx)
+            tx = self._check_address_reqSigs(tx)
         return cattrs.structure(block, BlockResponse)
 
     def get_block_hash_from_height(self, session: Session, block_height: int) -> str:

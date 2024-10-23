@@ -20,7 +20,7 @@ class DogeClient:
     def _post(self, session: Session, json=None):
         return session.post(self.url, json=json, timeout=20)
 
-    def _check_adress_reqSigs_prevout(self, tx):
+    def _check_address_reqSigs_prevout(self, tx):
         """Makes sure that adress, reqSigs and prevout are correct"""
         for vin in tx["vin"]:
             if "coinbase" not in vin:
@@ -47,7 +47,7 @@ class DogeClient:
         ).json(parse_float=str)["result"]
 
         # Handle address, reqSigs and prevout
-        tx = self._check_adress_reqSigs_prevout(tx)
+        tx = self._check_address_reqSigs_prevout(tx)
         return cattrs.structure(tx, TransactionResponse)
 
     def get_block_by_hash(self, session: Session, block_hash: str) -> BlockResponse:
@@ -64,7 +64,7 @@ class DogeClient:
 
         # Handle address, reqSigs and prevout
         for tx in block["tx"]:
-            tx = self._check_adress_reqSigs_prevout(tx)
+            tx = self._check_address_reqSigs_prevout(tx)
         return cattrs.structure(block, BlockResponse)
 
     def get_block_hash_from_height(self, session: Session, block_height: int) -> str:

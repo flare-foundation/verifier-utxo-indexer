@@ -48,7 +48,7 @@ class DogeClientTest(TestCase):
 
     def test_check_adress_reqSigs_prevout(self):
         """Test for address logic in  aget_block_by_hash method"""
-        tx = self.clientDoge._check_adress_reqSigs_prevout(tx_example_adress)
+        tx = self.clientDoge._check_address_reqSigs_prevout(tx_example_adress)
 
         vouts = tx["vout"]
         self.assertEqual(vouts[0]["scriptPubKey"]["address"], "")

@@ -73,7 +73,7 @@ class BtcClientTest(TestCase):
 
     def test_check_adress_reqSigs(self):
         """Test for address logic in  aget_block_by_hash method"""
-        tx = self.clientBTC._check_adress_reqSigs(tx_example_adress)
+        tx = self.clientBTC._check_address_reqSigs(tx_example_adress)
 
         vouts = tx["vout"]
         self.assertEqual(vouts[0]["scriptPubKey"]["address"], "")
