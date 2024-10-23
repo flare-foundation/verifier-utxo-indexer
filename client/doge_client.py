@@ -21,7 +21,7 @@ class DogeClient:
         return session.post(self.url, json=json, timeout=20)
 
     def _check_address_reqSigs_prevout(self, tx):
-        """Makes sure that adress, reqSigs and prevout are correct"""
+        """Makes sure that address, reqSigs and prevout are correct"""
         for vin in tx["vin"]:
             if "coinbase" not in vin:
                 vin["prevout"] = None

@@ -21,7 +21,7 @@ class BtcClient:
         return session.post(self.url, json=json, timeout=20)
 
     def _check_address_reqSigs(self, tx):
-        """Makes sure that adress, reqSigs are correct"""
+        """Makes sure that address, reqSigs are correct"""
         for vin in tx["vin"]:
             if "prevout" in vin:
                 scriptPubKey = vin["prevout"]["scriptPubKey"]
