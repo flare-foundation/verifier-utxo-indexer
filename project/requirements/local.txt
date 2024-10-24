@@ -1,4 +1,4 @@
 -r common.txt
 
 # Tools
-pre-commit==3.3.1
+pre-commit==3.8.0

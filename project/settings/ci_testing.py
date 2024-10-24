@@ -12,3 +12,5 @@ TEST_OUTPUT_FILE_NAME = "testreport.xml"
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 SEND_EMAIL_CONFIRMATIONS = False
+
+DJANGO_ADMIN_PATH = None

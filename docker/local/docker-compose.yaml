@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   postgresdb:
     container_name: ${COMPOSE_PROJECT_NAME}_db
@@ -19,19 +17,15 @@ services:
 
   appserver:
     container_name: ${COMPOSE_PROJECT_NAME}_server
-    # uncomment if not using docker desktop
-    # user: ${USER_UID}:${USER_GID}
     build:
       context: ../../
       dockerfile: docker/local/Dockerfile
     environment:
-      DB_PORT: 5432
-      DB_HOST: ${COMPOSE_PROJECT_NAME}_db
       PYTHONUNBUFFERED: 1
     env_file:
       - ../../.env
     ports:
-      - "127.0.0.1:${LISTEN_PORT}:8000"
+      - "127.0.0.1:${SERVER_PROXY_PORT}:8000"
     depends_on:
       - postgresdb
     volumes:

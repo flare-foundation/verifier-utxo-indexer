@@ -4,7 +4,7 @@ from datetime import datetime
 from django.utils.timezone import make_aware
 
 # AFLABS PROJECT SETTINGS
-PROJECT_NAME = "Doge Indexer"
+PROJECT_NAME = "UTXO Indexer"
 PROJECT_SETTINGS = os.environ.get("DJANGO_SETTINGS_MODULE", "project.settings.local")
 PROJECT_COMMIT_HASH = "local"
 PROJECT_VERSION = "local"
@@ -27,7 +27,7 @@ DATABASES = {
         "NAME": os.environ.get("DB_NAME", ""),
         "USER": os.environ.get("DB_USER", ""),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "HOST": os.environ.get("DB_HOST", ""),
         "PORT": os.environ.get("DB_PORT", ""),
     }
 }
@@ -62,21 +62,6 @@ DEBUG = False
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Email settings
-SEND_EMAIL_CONFIRMATIONS = os.environ.get("SEND_EMAIL_CONFIRMATIONS") == "true"
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-EMAIL_PORT = os.environ.get("EMAIL_PORT")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS")
-
-et = os.environ.get("EMAIL_TIMEOUT", "")
-try:
-    EMAIL_TIMEOUT = int(et)
-except ValueError:
-    EMAIL_TIMEOUT = None
-
 INSTALLED_APPS = [
     # builtin
     "django.contrib.admin",
@@ -87,13 +72,10 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.postgres",
     # dependencies
-    "rest_framework",
-    "simple_history",
     "corsheaders",
-    "drf_spectacular",
     # our apps
     "afauth.apps.AfauthConfig",
-    "doge_indexer.apps.DogeIndexerConfig",
+    "utxo_indexer.apps.UtxoIndexerConfig",
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -109,7 +91,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "simple_history.middleware.HistoryRequestMiddleware",  # Injects user in simple history
 ]
 
 ROOT_URLCONF = "project.urls"
@@ -166,46 +147,3 @@ AUTH_USER_MODEL = "afauth.AFUser"
 STATIC_URL = "/static/"
 
 # END OF STATIC FILES
-
-# AFLABS SPECIFIC APP SETTINGS
-# if you add something here make sure you add it to .env.example if applicable
-
-# deploy url for self referencing in emails, etc..
-DEFAULT_WEB_URL = os.environ.get("DEFAULT_WEB_URL")
-
-# requirements monitoring
-REQUIREMENTS_FILE = os.environ.get("REQUIREMENTS_FILE", None)
-
-# deploy url for self referencing in emails, etc..
-FRONTEND_URL = os.environ.get("FRONTEND_URL")
-
-# END OF AFLABS SPECIFIC APP SETTINGS
-
-# DEPENDENCY SETTINGS
-
-# djangorestframework
-REST_FRAMEWORK = {
-    # "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
-    "PAGE_SIZE": 100,
-}
-
-# drf-spectacular
-SPECTACULAR_SETTINGS = {
-    "TITLE": f"{PROJECT_NAME} API",
-    "DESCRIPTION": f"Api documentation for {PROJECT_NAME}",
-    "VERSION": "1.0.0",
-    "SCHEMA_PATH_PREFIX": r"/api/[0-9]",
-    "ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE": False,
-    "SERVE_INCLUDE_SCHEMA": False,
-    "COMPONENT_SPLIT_REQUEST": True,
-}
-
-# django-types
-from django.db.models.query import QuerySet
-
-for cls in [QuerySet]:
-    cls.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)  # type: ignore [attr-defined]
-
-# END OF DEPENDENCY SETTINGS

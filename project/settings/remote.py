@@ -10,6 +10,8 @@ ALLOWED_HOSTS = [
     os.environ["ALLOWED_HOST"],
 ]
 
+DJANGO_ADMIN_PATH = os.environ.get("DJANGO_ADMIN_PATH")
+
 # django-cors-headers
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

@@ -1,12 +1,8 @@
 repos:
-- repo: https://github.com/ambv/black
-  rev: 23.3.0
-  hooks:
-  - id: black
-    args: ["--check"]
-    exclude: ^.*\b(migrations)\b.*$
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.0.285
+  rev: v0.6.6
   hooks:
   - id: ruff
-    exclude: ^.*\b(migrations)\b.*$
+  - id: ruff-format
+    args: [ --check ]
+

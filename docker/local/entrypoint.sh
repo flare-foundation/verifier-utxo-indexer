@@ -1,13 +1,31 @@
 #!/usr/bin/env bash
 
-until pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" 2>/dev/null; do
-	echo "waiting for postgres"
-	sleep 1
-done
+set -eu
 
-# python manage.py collectstatic --no-input --settings=${DJANGO_SETTINGS_MODULE}
-# python manage.py migrate --settings=${DJANGO_SETTINGS_MODULE}
+dirs=(
+    "/appdata/media"
+)
 
-[ -z ${ADMIN_EMAIL+x} ] | [ -z ${ADMIN_PASSWORD+x} ] || python manage.py admin_user --email $ADMIN_EMAIL --password $ADMIN_PASSWORD --settings=${DJANGO_SETTINGS_MODULE}
+if [[ ${USER_UID:+x} != "x" ]] || [[ ${USER_GID:+x} != "x" ]]; then
+    # using docker desktop
+    echo "Assuming Docker Desktop. Not changing permissions"
+    echo "Running 'exec $@'"
+    exec "$@"
+else
+    echo "Assuming not Docker Desktop. Changing permissions for specified folders"
+    # not using docker desktop
+    for d in ${dirs[@]}; do
+        if [[ -d "$d" ]] && [[ "$(stat -c '%u:%g' $d)" != "$USER_UID:$USER_GID" ]]; then
+            # TODO:(matej) what if directory is owned but content is not?
+            echo "Found not owned directory '$d'. Running `chown -R $USER_UID:$USER_GID $d`"
+            chown -R "$USER_UID:$USER_GID" "$d"
+        else
+            echo "Specified directory '$d' not found"
 
-exec python manage.py runserver "0.0.0.0:8000" --settings=${DJANGO_SETTINGS_MODULE}
+        fi
+    done
+
+    echo "Running 'exec gosu $USER_UID:$USER_GID $@'"
+    exec gosu "$USER_UID:$USER_GID" "$@"
+fi
+

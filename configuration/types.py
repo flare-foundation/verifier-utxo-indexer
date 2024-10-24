@@ -3,6 +3,7 @@ from attrs import frozen
 
 @frozen
 class Config:
+    SOURCE_NAME: str
     NODE_RPC_URL: str
     AUTH_USERNAME: str
     AUTH_PASSWORD: str

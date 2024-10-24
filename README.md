@@ -7,8 +7,8 @@ pyenv install 3.11.4
 
 set up dev environment
 ```sh
-pyenv virtualenv 3.11.4 doge_indexer
-pyenv local doge_indexer
+pyenv virtualenv 3.11.4 verifier_utxo_indexer
+pyenv local verifier_utxo_indexer
 pip install -r project/requirements/local.txt
 pre-commit install
 ```
