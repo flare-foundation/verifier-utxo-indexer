@@ -17,6 +17,14 @@ class BlockProcessorMemory:
 
 
 @define
+class PostProcessingMemoryElement:
+    tx: UtxoTransaction
+    vins: list[TransactionInput] = field(factory=list)
+    vins_cb: list[TransactionInputCoinbase] = field(factory=list)
+    vouts: list[TransactionOutput] = field(factory=list)
+
+
+@define
 class BlockInformationPassing:
     block_num: int
     block_ts: int

@@ -50,8 +50,9 @@ def process_pre_vout_transaction(
         txid, vout_n = vin.txid, vin.vout
         res = transaction_getter(txid, session)
         prevout_res = res.vout[vout_n]
+        input_object = TransactionInput.object_from_node_response(vin_n, vin, prevout_res, tx_link)
         processed_block.vins.append(TransactionInput.object_from_node_response(vin_n, vin, prevout_res, tx_link))
-        return True
+        return input_object
 
     return _process_pre_vout_transaction
 
@@ -63,7 +64,6 @@ class DogeIndexerClient(IndexerClient):
     def default(cls):
         return cls.new(DogeClient.default(), 60)
 
-    # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_transaction(self, txid: str, worker: Session) -> TransactionResponse:
         return self._client.get_transaction(worker, txid)
@@ -117,6 +117,8 @@ class DogeIndexerClient(IndexerClient):
 
         if not process_queue.empty():
             raise Exception("Queue should be empty after processing")
+
+        self.post_process_block_data(processed_blocks)
 
         with transaction.atomic():
             UtxoTransaction.objects.bulk_create(processed_blocks.tx, batch_size=999)
