@@ -1,10 +1,10 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
 from utxo_indexer.models.types import CoinbaseVinResponse, TransactionResponse, VoutResponse
-from utxo_indexer.utils import WordToOpcode, is_valid_bytes_32_hex
+from utxo_indexer.utils import ZERO_BYTES_32, WordToOpcode, is_valid_bytes_32_hex, merkle_tree_from_address_strings
 
 if TYPE_CHECKING:
     from utxo_indexer.models import (
@@ -13,7 +13,8 @@ if TYPE_CHECKING:
         TransactionOutput,
     )
 
-ZERO_REFERENCE = "0000000000000000000000000000000000000000000000000000000000000000"
+ZERO_REFERENCE = ZERO_BYTES_32
+ZERO_SOURCE_ADDRESS_ROOT = ZERO_BYTES_32
 
 
 class UtxoTransaction(models.Model):
@@ -26,12 +27,14 @@ class UtxoTransaction(models.Model):
     block_number = models.PositiveIntegerField(db_column="blockNumber")
     timestamp = models.PositiveBigIntegerField(db_column="timestamp")
 
+    # Precalculated field to enable quick search for transactions to support attestation types
     payment_reference = HexString32ByteField(db_column="paymentReference")
+    source_addresses_root = HexString32ByteField(db_column="sourceAddressesRoot")
 
     # All transactions but coinbase are native payment transactions
     is_native_payment = models.BooleanField(default=False, db_column="isNativePayment")
 
-    # TODO: update to enum field
+    # TODO: consider update to enum field
     transaction_type = models.CharField(db_column="transactionType")
 
     # response = models.BinaryField(db_column="response")
@@ -42,10 +45,17 @@ class UtxoTransaction(models.Model):
             models.Index(fields=["timestamp"]),
             models.Index(fields=["payment_reference"]),
             models.Index(fields=["transaction_type"]),
+            models.Index(fields=["source_addresses_root"]),
         )
 
     def __str__(self) -> str:
         return f"Transaction {self.transaction_id} in block : {self.block_number}"
+
+    def update_source_addresses_root(self, inputs: List[TransactionInput]):
+        self.source_addresses_root = self._extract_source_addresses_root_vots(inputs)
+
+    def update_source_addresses_root_cb(self, inputs: List[TransactionInputCoinbase]):
+        self.source_addresses_root = self._extract_source_addresses_root_coinbase(inputs)
 
     @classmethod
     def object_from_node_response(cls, response: TransactionResponse, block_number: int, timestamp: int):
@@ -59,6 +69,7 @@ class UtxoTransaction(models.Model):
                 payment_reference=ZERO_REFERENCE,
                 is_native_payment=False,
                 transaction_type="coinbase",
+                source_addresses_root=ZERO_SOURCE_ADDRESS_ROOT,
             )
         return cls(
             block_number=block_number,
@@ -67,6 +78,7 @@ class UtxoTransaction(models.Model):
             payment_reference=ref,
             is_native_payment=True,
             transaction_type="full_payment",
+            source_addresses_root=ZERO_SOURCE_ADDRESS_ROOT,
         )
 
     @staticmethod
@@ -100,3 +112,20 @@ class UtxoTransaction(models.Model):
         if len(std_references) == 1:
             return std_references[0]
         return ZERO_REFERENCE
+
+    @staticmethod
+    def _extract_source_addresses_root_coinbase(inputs: List[TransactionInputCoinbase]):
+        return ZERO_SOURCE_ADDRESS_ROOT
+
+    @staticmethod
+    def _extract_source_addresses_root_vots(inputs: List[TransactionInput]) -> str:
+        addresses = []
+        for input in inputs:
+            if input.script_key_address != "":
+                addresses.append(input.script_key_address)
+            else:
+                addresses.append(None)
+        tree = merkle_tree_from_address_strings(addresses)
+        if tree.root is None:
+            return ZERO_SOURCE_ADDRESS_ROOT
+        return tree.root

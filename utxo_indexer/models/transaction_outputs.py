@@ -35,6 +35,7 @@ class TransactionOutput(AbstractTransactionOutput):
     @classmethod
     def object_from_node_response(cls, response: VoutResponse, transaction_link_id: str):
         script_pub_key = response.scriptPubKey
+        print("Address: ", script_pub_key.address)
         return cls(
             transaction_link_id=transaction_link_id,
             n=response.n,

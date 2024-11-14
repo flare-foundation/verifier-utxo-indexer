@@ -12,6 +12,9 @@ psycopg[binary]==3.2.2
 # Django Extensions
 django-cors-headers==4.4.0
 
+# Flare libs
+py-flare-common==0.0.1
+
 # Other
 requests==2.32.3
 types-requests==2.32.0.20240914

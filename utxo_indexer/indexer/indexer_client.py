@@ -130,17 +130,14 @@ class IndexerClient:
 
     # Base methods for interacting with node directly
 
-    # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_current_block_height(self, worker: Session) -> int:
         return self._client.get_block_height(worker)
 
-    # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_block_hash_from_height(self, block_height: int, worker: Session) -> str:
         return self._client.get_block_hash_from_height(worker, block_height)
 
-    # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_block_by_hash(self, block_hash: str, worker: Session) -> BlockResponse:
         return self._client.get_block_by_hash(worker, block_hash)

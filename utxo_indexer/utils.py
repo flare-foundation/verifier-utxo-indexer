@@ -1,5 +1,10 @@
 import string
 from enum import Enum
+from typing import List
+
+from py_flare_common.merkle import MerkleTree, single_hash
+
+ZERO_BYTES_32 = "0000000000000000000000000000000000000000000000000000000000000000"
 
 
 def un_prefix_0x(to_unprefixed: str) -> str:
@@ -12,6 +17,21 @@ def un_prefix_0x(to_unprefixed: str) -> str:
 def is_valid_bytes_32_hex(maybe_hex_string: str):
     maybe_hex_string = un_prefix_0x(maybe_hex_string)
     return len(maybe_hex_string) == 64 and all(c in string.hexdigits for c in maybe_hex_string)
+
+
+def string_to_ascii_hex(input_string: str) -> str:
+    return "".join(format(ord(char), "02x") for char in input_string)
+
+
+def merkle_tree_from_address_strings(addresses: List[(str | None)]):
+    hashedAddresses = []
+    for address in addresses:
+        if address is None:
+            hashedAddresses.append(ZERO_BYTES_32)
+        else:
+            hashadd = single_hash(single_hash(string_to_ascii_hex(address)))
+            hashedAddresses.append(hashadd)
+    return MerkleTree(hashedAddresses)
 
 
 class WordToOpcode(Enum):

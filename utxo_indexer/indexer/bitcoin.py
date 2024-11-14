@@ -43,19 +43,29 @@ class BtcIndexerClient(IndexerClient):
         for tx in res_block.tx:
             tx_link = UtxoTransaction.object_from_node_response(tx, block_info.block_num, block_info.block_ts)
             processed_blocks.tx.append(tx_link)
+            tx_cb_inputs = []
+            tx_inputs = []
             for vin_n, vin in enumerate(tx.vin):
                 if isinstance(vin, CoinbaseVinResponse):
-                    processed_blocks.vins_cb.append(
-                        TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
-                    )
+                    cb_input = TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
+                    tx_cb_inputs.append(cb_input)
+                    processed_blocks.vins_cb.append(cb_input)
                 else:
                     assert isinstance(
                         vin.prevout, PrevoutResponse
                     ), "PrevoutResponse sholdn't be None for BitcoinClient"
                     vout = VoutResponse(n=vin.vout, value=vin.prevout.value, scriptPubKey=vin.prevout.scriptPubKey)
-                    processed_blocks.vins.append(
-                        TransactionInput.object_from_node_response(vin_n, vin, vout, tx_link.transaction_id)
-                    )
+                    tx_input = TransactionInput.object_from_node_response(vin_n, vin, vout, tx_link.transaction_id)
+                    tx_inputs.append(tx_input)
+                    processed_blocks.vins.append(tx_input)
+            if len(tx_cb_inputs) > 0 and len(tx_inputs) > 0:
+                raise Exception("Cant have a combination of coinbase and regular inputs")
+            if len(tx_cb_inputs) > 0:
+                tx_link.update_source_addresses_root_cb(tx_cb_inputs)
+            elif len(tx_inputs) > 0:
+                tx_link.update_source_addresses_root(tx_inputs)
+            else:
+                raise Exception(f"Transaction has no inputs: {tx_link.transaction_id}")
 
             for vout in tx.vout:
                 processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link.transaction_id))
