@@ -45,18 +45,18 @@ class BtcIndexerClient(IndexerClient):
             processed_blocks.tx.append(tx_link)
             for vin_n, vin in enumerate(tx.vin):
                 if isinstance(vin, CoinbaseVinResponse):
-                    cb_input = TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
+                    cb_input = TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link)
                     processed_blocks.vins_cb.append(cb_input)
                 else:
                     assert isinstance(
                         vin.prevout, PrevoutResponse
                     ), "PrevoutResponse sholdn't be None for BitcoinClient"
                     vout = VoutResponse(n=vin.vout, value=vin.prevout.value, scriptPubKey=vin.prevout.scriptPubKey)
-                    tx_input = TransactionInput.object_from_node_response(vin_n, vin, vout, tx_link.transaction_id)
+                    tx_input = TransactionInput.object_from_node_response(vin_n, vin, vout, tx_link)
                     processed_blocks.vins.append(tx_input)
 
             for vout in tx.vout:
-                processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link.transaction_id))
+                processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
 
         self.post_process_block_data(processed_blocks)
 

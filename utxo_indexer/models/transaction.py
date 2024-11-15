@@ -4,7 +4,13 @@ from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
 from utxo_indexer.models.types import CoinbaseVinResponse, TransactionResponse, VoutResponse
-from utxo_indexer.utils import ZERO_BYTES_32, WordToOpcode, is_valid_bytes_32_hex, merkle_tree_from_address_strings
+from utxo_indexer.utils import (
+    ZERO_BYTES_32,
+    WordToOpcode,
+    is_valid_bytes_32_hex,
+    merkle_tree_from_address_strings,
+    un_prefix_0x,
+)
 
 if TYPE_CHECKING:
     from utxo_indexer.models import (
@@ -51,10 +57,10 @@ class UtxoTransaction(models.Model):
     def __str__(self) -> str:
         return f"Transaction {self.transaction_id} in block : {self.block_number}"
 
-    def update_source_addresses_root(self, inputs: List[TransactionInput]):
+    def update_source_addresses_root(self, inputs: List["TransactionInput"]):
         self.source_addresses_root = self._extract_source_addresses_root_vots(inputs)
 
-    def update_source_addresses_root_cb(self, inputs: List[TransactionInputCoinbase]):
+    def update_source_addresses_root_cb(self, inputs: List["TransactionInputCoinbase"]):
         self.source_addresses_root = self._extract_source_addresses_root_coinbase(inputs)
 
     @classmethod
@@ -114,11 +120,11 @@ class UtxoTransaction(models.Model):
         return ZERO_REFERENCE
 
     @staticmethod
-    def _extract_source_addresses_root_coinbase(inputs: List[TransactionInputCoinbase]):
+    def _extract_source_addresses_root_coinbase(inputs: List["TransactionInputCoinbase"]):
         return ZERO_SOURCE_ADDRESS_ROOT
 
     @staticmethod
-    def _extract_source_addresses_root_vots(inputs: List[TransactionInput]) -> str:
+    def _extract_source_addresses_root_vots(inputs: List["TransactionInput"]) -> str:
         addresses = []
         for input in inputs:
             if input.script_key_address != "":
@@ -128,4 +134,4 @@ class UtxoTransaction(models.Model):
         tree = merkle_tree_from_address_strings(addresses)
         if tree.root is None:
             return ZERO_SOURCE_ADDRESS_ROOT
-        return tree.root
+        return un_prefix_0x(tree.root)

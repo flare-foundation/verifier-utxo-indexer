@@ -111,9 +111,7 @@ class TransactionOutputTest(TestCase):
         self.transaction.save()
 
     def test_object_from_node_response(self):
-        tx_out1 = TransactionOutput.object_from_node_response(
-            vout_example, "63c25bcfcce2d2e830dec089d84653c678e6841cf375cdcc5518590cba5b2008"
-        )
+        tx_out1 = TransactionOutput.object_from_node_response(vout_example, self.transaction)
         self.assertEqual(isinstance(tx_out1, TransactionOutput), True)
         self.assertEqual(tx_out1.n, 0)
         self.assertEqual(tx_out1.value, "1.13428769")
@@ -139,17 +137,13 @@ class TransactionInputCoinbaseTest(TestCase):
 
     def test_object_from_node_response(self):
         try:
-            TransactionInputCoinbase.object_from_node_response(
-                1, vin_example_coinbase, "45f91bcfcce2d2e830dec089d84653c678e6841cf375cdcc5518590cba5b2008"
-            )
+            TransactionInputCoinbase.object_from_node_response(1, vin_example_coinbase, self.transaction)
         except AssertionError:
             pass
         else:
             raise ValueError("vin_n=1 is not 0")
 
-        tx_in = TransactionInputCoinbase.object_from_node_response(
-            0, vin_example_coinbase, "45f91bcfcce2d2e830dec089d84653c678e6841cf375cdcc5518590cba5b2008"
-        )
+        tx_in = TransactionInputCoinbase.object_from_node_response(0, vin_example_coinbase, self.transaction)
         self.assertEqual(isinstance(tx_in, TransactionInputCoinbase), True)
         self.assertEqual(tx_in.vin_n, 0)
         self.assertEqual(tx_in.vin_coinbase, "0344ba2f00")

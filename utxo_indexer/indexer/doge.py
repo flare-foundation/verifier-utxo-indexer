@@ -35,7 +35,7 @@ def thread_worker(session: Session, process_queue: Queue, processed_block: Block
 def process_pre_vout_transaction(
     vin: VinResponse,
     vin_n: int,
-    tx_link: str,
+    tx_link: UtxoTransaction,
     transaction_getter: Callable[[str, Session], TransactionResponse],
 ):
     """Return the function that processes the transaction prevouts and link it to the spending transaction
@@ -94,14 +94,12 @@ class DogeIndexerClient(IndexerClient):
             for vin_n, vin in enumerate(tx.vin):
                 if isinstance(vin, CoinbaseVinResponse):
                     processed_blocks.vins_cb.append(
-                        TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link.transaction_id)
+                        TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link)
                     )
                 else:
-                    process_queue.put(
-                        process_pre_vout_transaction(vin, vin_n, tx_link.transaction_id, self._get_transaction)
-                    )
+                    process_queue.put(process_pre_vout_transaction(vin, vin_n, tx_link, self._get_transaction))
             for vout in tx.vout:
-                processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link.transaction_id))
+                processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
 
         # multithreading part of the processing
         workers = []

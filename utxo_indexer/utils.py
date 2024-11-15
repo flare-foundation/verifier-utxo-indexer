@@ -2,7 +2,8 @@ import string
 from enum import Enum
 from typing import List
 
-from py_flare_common.merkle import MerkleTree, single_hash
+from py_flare_common.merkle import MerkleTree
+from py_flare_common.merkle.tree import single_hash
 
 ZERO_BYTES_32 = "0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -29,7 +30,7 @@ def merkle_tree_from_address_strings(addresses: List[(str | None)]):
         if address is None:
             hashedAddresses.append(ZERO_BYTES_32)
         else:
-            hashadd = single_hash(single_hash(string_to_ascii_hex(address)))
+            hashadd = un_prefix_0x(single_hash(un_prefix_0x(single_hash(string_to_ascii_hex(address)))))
             hashedAddresses.append(hashadd)
     return MerkleTree(hashedAddresses)
 

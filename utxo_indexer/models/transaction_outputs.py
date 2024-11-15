@@ -1,6 +1,7 @@
 from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
+from utxo_indexer.models.transaction import UtxoTransaction
 from utxo_indexer.models.types import CoinbaseVinResponse, VinResponse, VoutResponse
 
 
@@ -33,11 +34,14 @@ class TransactionOutput(AbstractTransactionOutput):
         return super().__str__()
 
     @classmethod
-    def object_from_node_response(cls, response: VoutResponse, transaction_link_id: str):
+    def object_from_node_response(cls, response: VoutResponse, transaction_link: UtxoTransaction):
         script_pub_key = response.scriptPubKey
+        print("Transaction link: ", transaction_link)
         print("Address: ", script_pub_key.address)
+        print(response)
+        print()
         return cls(
-            transaction_link_id=transaction_link_id,
+            transaction_link=transaction_link,
             n=response.n,
             value=response.value,
             script_key_asm=script_pub_key.asm,
@@ -61,10 +65,12 @@ class TransactionInputCoinbase(models.Model):
         return f"Coinbase vin for tx: {self.transaction_link.transaction_id}"
 
     @classmethod
-    def object_from_node_response(cls, vin_n: int, vin_response: CoinbaseVinResponse, transaction_link_id: str):
+    def object_from_node_response(
+        cls, vin_n: int, vin_response: CoinbaseVinResponse, transaction_link: UtxoTransaction
+    ):
         assert vin_n == 0, "Coinbase transaction should always be first in vin array"
         return cls(
-            transaction_link_id=transaction_link_id,
+            transaction_link=transaction_link,
             vin_n=vin_n,
             vin_coinbase=vin_response.coinbase,
             vin_sequence=vin_response.sequence,
@@ -100,11 +106,11 @@ class TransactionInput(AbstractTransactionOutput):
         vin_n: int,
         vin_response: VinResponse,
         vout_response: VoutResponse,
-        transaction_link_id: str,
+        transaction_link: UtxoTransaction,
     ):
         vout_script_pub_key = vout_response.scriptPubKey
         return cls(
-            transaction_link_id=transaction_link_id,
+            transaction_link=transaction_link,
             vin_n=vin_n,
             # (pre)vout part
             n=vout_response.n,
