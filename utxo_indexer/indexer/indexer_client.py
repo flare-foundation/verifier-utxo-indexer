@@ -8,7 +8,7 @@ from requests.sessions import Session
 from client import BtcClient, DogeClient
 from configuration.config import config
 from configuration.types import Config
-from utxo_indexer.indexer.types import BlockProcessorMemory, PostProcessingMemoryElement
+from utxo_indexer.indexer.types import PostProcessingMemoryElement
 from utxo_indexer.models import (
     TipSyncState,
     TipSyncStateChoices,
@@ -193,29 +193,13 @@ class IndexerClient:
         """
         raise NotImplementedError("Implement the block processing method")
 
-    def post_process_block_data(self, processed_blocks: BlockProcessorMemory):
-        postprocess_obj: dict[str, PostProcessingMemoryElement] = {}
-        for tx in processed_blocks.tx:
-            postprocess_obj[tx.transaction_id] = PostProcessingMemoryElement(obj=tx, cbi=[], inp=[])
-
-        for cbi in processed_blocks.vins_cb:
-            txid = cbi.transaction_link.transaction_id
-            if txid not in postprocess_obj:
-                raise Exception("Post processing fail in coinbase loop")
-            postprocess_obj[txid].cbi.append(cbi)
-
-        for tinp in processed_blocks.vins:
-            txid = tinp.transaction_link.transaction_id
-            if txid not in postprocess_obj:
-                raise Exception("Post processing fail in coinbase loop")
-            postprocess_obj[txid].inp.append(tinp)
-
-        for key, elem in postprocess_obj.items():
-            if len(elem.cbi) > 0 and len(elem.inp) > 0:
-                raise Exception(f"Cant have a combination of coinbase and regular inputs on tx {key}")
-            if len(elem.cbi) > 0:
-                elem.obj.update_source_addresses_root_cb(elem.cbi)
-            elif len(elem.inp) > 0:
-                elem.obj.update_source_addresses_root(elem.inp)
-            else:
-                raise Exception(f"Transaction has no inputs: {key}")
+    def update_source_addresses_root_from_tx_data(self, processed_transaction: PostProcessingMemoryElement):
+        transaction_id = processed_transaction.obj.transaction_id
+        if len(processed_transaction.cbi) > 0 and len(processed_transaction.inp) > 0:
+            raise Exception(f"Cant have a combination of coinbase and regular inputs on tx {transaction_id}")
+        if len(processed_transaction.cbi) > 0:
+            processed_transaction.obj.update_source_addresses_root_cb(processed_transaction.cbi)
+        elif len(processed_transaction.inp) > 0:
+            processed_transaction.obj.update_source_addresses_root(processed_transaction.inp)
+        else:
+            raise Exception(f"Transaction has no inputs: {transaction_id}")

@@ -18,7 +18,7 @@ from utxo_indexer.models.types import CoinbaseVinResponse, TransactionResponse, 
 
 from .decorators import retry
 from .indexer_client import IndexerClient
-from .types import BlockInformationPassing, BlockProcessorMemory
+from .types import BlockInformationPassing, BlockProcessorMemory, PostProcessingMemoryElement
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class DogeIndexerClient(IndexerClient):
     def process_block(self, block_height: int):
         # NOTICE: we always assume that block processing is for blocks that are for sure on main branch of the blockchain
 
-        processed_blocks = BlockProcessorMemory()
+        processed_block = BlockProcessorMemory()
         process_queue: Queue = Queue()
 
         block_hash = self._get_block_hash_from_height(block_height, self.toplevel_worker)
@@ -90,23 +90,23 @@ class DogeIndexerClient(IndexerClient):
         # Put all of the transaction in block on the processing queue
         for tx in res_block.tx:
             tx_link = UtxoTransaction.object_from_node_response(tx, block_info.block_num, block_info.block_ts)
-            processed_blocks.tx.append(tx_link)
+            processed_block.tx.append(tx_link)
             for vin_n, vin in enumerate(tx.vin):
                 if isinstance(vin, CoinbaseVinResponse):
-                    processed_blocks.vins_cb.append(
+                    processed_block.vins_cb.append(
                         TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link)
                     )
                 else:
                     process_queue.put(process_pre_vout_transaction(vin, vin_n, tx_link, self._get_transaction))
             for vout in tx.vout:
-                processed_blocks.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
+                processed_block.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
 
         # multithreading part of the processing
         workers = []
 
         for worker_index in range(len(self.workers)):
             t = threading.Thread(
-                target=thread_worker, args=(self.workers[worker_index], process_queue, processed_blocks)
+                target=thread_worker, args=(self.workers[worker_index], process_queue, processed_block)
             )
             workers.append(t)
             t.start()
@@ -116,12 +116,30 @@ class DogeIndexerClient(IndexerClient):
         if not process_queue.empty():
             raise Exception("Queue should be empty after processing")
 
-        self.post_process_block_data(processed_blocks)
+        # Adding source_addresses_root to UtxoTransaction
+        postprocess_obj: dict[str, PostProcessingMemoryElement] = {}
+        for tx in processed_block.tx:
+            postprocess_obj[tx.transaction_id] = PostProcessingMemoryElement(obj=tx, cbi=[], inp=[])
+
+        for cbi in processed_block.vins_cb:
+            txid = cbi.transaction_link.transaction_id
+            if txid not in postprocess_obj:
+                raise Exception("Post processing fail in coinbase inputs loop")
+            postprocess_obj[txid].cbi.append(cbi)
+
+        for tinp in processed_block.vins:
+            txid = tinp.transaction_link.transaction_id
+            if txid not in postprocess_obj:
+                raise Exception("Post processing fail in regular inputs loop")
+            postprocess_obj[txid].inp.append(tinp)
+
+        for processed_transaction in postprocess_obj.values():
+            self.update_source_addresses_root_from_tx_data(processed_transaction)
 
         with transaction.atomic():
-            UtxoTransaction.objects.bulk_create(processed_blocks.tx, batch_size=999)
-            TransactionInputCoinbase.objects.bulk_create(processed_blocks.vins_cb, batch_size=999)
-            TransactionInput.objects.bulk_create(processed_blocks.vins, batch_size=999)
-            TransactionOutput.objects.bulk_create(processed_blocks.vouts, batch_size=999)
+            UtxoTransaction.objects.bulk_create(processed_block.tx, batch_size=999)
+            TransactionInputCoinbase.objects.bulk_create(processed_block.vins_cb, batch_size=999)
+            TransactionInput.objects.bulk_create(processed_block.vins, batch_size=999)
+            TransactionOutput.objects.bulk_create(processed_block.vouts, batch_size=999)
             UtxoBlock.objects.bulk_create([block_db])
             self.update_tip_state_done_block_process(block_height)
