@@ -36,10 +36,6 @@ class TransactionOutput(AbstractTransactionOutput):
     @classmethod
     def object_from_node_response(cls, response: VoutResponse, transaction_link: UtxoTransaction):
         script_pub_key = response.scriptPubKey
-        print("Transaction link: ", transaction_link)
-        print("Address: ", script_pub_key.address)
-        print(response)
-        print()
         return cls(
             transaction_link=transaction_link,
             n=response.n,

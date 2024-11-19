@@ -34,7 +34,7 @@ class UtxoTransaction(models.Model):
     timestamp = models.PositiveBigIntegerField(db_column="timestamp")
 
     # Precalculated field to enable quick search for transactions to support attestation types
-    payment_reference = HexString32ByteField(db_column="paymentReference")
+    payment_reference = HexString32ByteField(db_column="paymentReference", null=True)
     source_addresses_root = HexString32ByteField(db_column="sourceAddressesRoot")
 
     # All transactions but coinbase are native payment transactions
@@ -58,10 +58,20 @@ class UtxoTransaction(models.Model):
         return f"Transaction {self.transaction_id} in block : {self.block_number}"
 
     def update_source_addresses_root(self, inputs: List["TransactionInput"]):
-        self.source_addresses_root = self._extract_source_addresses_root_vots(inputs)
+        addresses = []
+        for input in inputs:
+            if input.script_key_address != "":
+                addresses.append(input.script_key_address)
+            else:
+                addresses.append(None)
+        tree = merkle_tree_from_address_strings(addresses)
+        if tree.root is None:
+            self.source_addresses_root = ZERO_SOURCE_ADDRESS_ROOT
+        else:
+            self.source_addresses_root = un_prefix_0x(tree.root)
 
     def update_source_addresses_root_cb(self, inputs: List["TransactionInputCoinbase"]):
-        self.source_addresses_root = self._extract_source_addresses_root_coinbase(inputs)
+        self.source_addresses_root = ZERO_SOURCE_ADDRESS_ROOT
 
     @classmethod
     def object_from_node_response(cls, response: TransactionResponse, block_number: int, timestamp: int):
@@ -72,7 +82,7 @@ class UtxoTransaction(models.Model):
                 block_number=block_number,
                 timestamp=timestamp,
                 transaction_id=response.txid,
-                payment_reference=ZERO_REFERENCE,
+                payment_reference=None,
                 is_native_payment=False,
                 transaction_type="coinbase",
                 source_addresses_root=ZERO_SOURCE_ADDRESS_ROOT,
@@ -117,21 +127,4 @@ class UtxoTransaction(models.Model):
 
         if len(std_references) == 1:
             return std_references[0]
-        return ZERO_REFERENCE
-
-    @staticmethod
-    def _extract_source_addresses_root_coinbase(inputs: List["TransactionInputCoinbase"]):
-        return ZERO_SOURCE_ADDRESS_ROOT
-
-    @staticmethod
-    def _extract_source_addresses_root_vots(inputs: List["TransactionInput"]) -> str:
-        addresses = []
-        for input in inputs:
-            if input.script_key_address != "":
-                addresses.append(input.script_key_address)
-            else:
-                addresses.append(None)
-        tree = merkle_tree_from_address_strings(addresses)
-        if tree.root is None:
-            return ZERO_SOURCE_ADDRESS_ROOT
-        return un_prefix_0x(tree.root)
+        return None
