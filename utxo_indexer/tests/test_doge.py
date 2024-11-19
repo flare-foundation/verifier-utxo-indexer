@@ -24,6 +24,7 @@ from utxo_indexer.tests.data_for_testing.testing_process_block_doge_data import 
     tx_example1_doge,
     tx_example2_doge,
 )
+from utxo_indexer.utils import merkle_tree_from_address_strings
 
 # DISABLE LOGGING
 logging.disable(logging.CRITICAL)
@@ -272,6 +273,19 @@ class DogeIndexerClientTest(TestCase):
         self.assertEqual(TransactionOutput.objects.count(), 4)
         tip_state = TipSyncState.instance()
         self.assertEqual(tip_state.latest_indexed_height, 33232)
+
+        tx1 = UtxoTransaction.objects.get(pk="ea57078c1ec6f4670fa3eb49c6486257ba36f9c49a0ad94d3b6cf631a2e92ae5")
+        assert tx1 is not None
+        self.assertEqual(tx1.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000")
+
+        tx2 = UtxoTransaction.objects.get(pk="cb09112278043f486e0e1b649d58c08e962958f2115d210f82f1ca9a13484ea2")
+        assert tx2 is not None
+        root = merkle_tree_from_address_strings(
+            ["DPgQ2fAm2VGKHmFAWi1WiyitfNZMbwKbc6", "DPgQ2fAm2VGKHmFAWi1WiyitfNZMbwKbc6"]
+        ).root
+        assert root is not None
+        self.assertEqual(tx2.source_addresses_root, root[2:])
+
         # Nothing else needs to be tested here,
         # object_from_node_response and update_tip_state_done_block_process
         # have been tested already.

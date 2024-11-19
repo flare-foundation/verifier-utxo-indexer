@@ -15,6 +15,7 @@ from utxo_indexer.tests.data_for_testing.testing_models_data import (
     vin_example,
     vin_example_coinbase,
     vout_example,
+    vout_example2,
 )
 
 logging.disable(logging.CRITICAL)
@@ -66,7 +67,7 @@ class UtxoTransactionTest(TestCase):
     def test__extract_payment_reference(self):
         reference_ex1 = UtxoTransaction._extract_payment_reference(tx_example1)
         reference_ex2 = UtxoTransaction._extract_payment_reference(tx_example2)
-        self.assertEqual(reference_ex1, "0000000000000000000000000000000000000000000000000000000000000000")
+        self.assertEqual(reference_ex1, None)
         self.assertEqual(reference_ex2, "aa21a9ed6c401b737bf1cd54a846760c3050908b77ef20c5e85880848fb3d1c8")
 
     def test_object_from_node_response(self):
@@ -77,8 +78,10 @@ class UtxoTransactionTest(TestCase):
         )
         self.assertEqual(tx_examle_model.block_number, 3127876)
         self.assertEqual(tx_examle_model.timestamp, 1728884507)
+        self.assertEqual(tx_examle_model.payment_reference, None)
         self.assertEqual(
-            tx_examle_model.payment_reference, "0000000000000000000000000000000000000000000000000000000000000000"
+            tx_examle_model.source_addresses_root,
+            "0000000000000000000000000000000000000000000000000000000000000000",
         )
         self.assertEqual(tx_examle_model.is_native_payment, True)
         self.assertEqual(tx_examle_model.transaction_type, "full_payment")
@@ -90,12 +93,42 @@ class UtxoTransactionTest(TestCase):
         )
         self.assertEqual(tx_example_coinbase_model.block_number, 3127876)
         self.assertEqual(tx_example_coinbase_model.timestamp, 1728884507)
+        self.assertEqual(tx_example_coinbase_model.payment_reference, None)
         self.assertEqual(
-            tx_example_coinbase_model.payment_reference,
+            tx_example_coinbase_model.source_addresses_root,
             "0000000000000000000000000000000000000000000000000000000000000000",
         )
         self.assertEqual(tx_example_coinbase_model.is_native_payment, False)
         self.assertEqual(tx_example_coinbase_model.transaction_type, "coinbase")
+
+    def test_update_source_addresses_root(self):
+        tx_examle_model = UtxoTransaction.object_from_node_response(tx_example1, 3127876, 1728884507)
+
+        tx_examle_model.update_source_addresses_root([])
+        self.assertEqual(
+            tx_examle_model.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        transaction_input1 = TransactionInput.object_from_node_response(1, vin_example, vout_example, tx_examle_model)
+        transaction_input2 = TransactionInput.object_from_node_response(1, vin_example, vout_example2, tx_examle_model)
+        tx_examle_model.update_source_addresses_root([transaction_input1, transaction_input2])
+        self.assertEqual(
+            tx_examle_model.source_addresses_root, "b1d5b94f8c98abebb310aa9440590879e3eab42a04a380c5c1c3639369683e09"
+        )
+
+    def test_update_source_addresses_root_cb(self):
+        tx_examle_model = UtxoTransaction.object_from_node_response(tx_example1, 3127876, 1728884507)
+
+        tx_examle_model.update_source_addresses_root_cb([])
+        self.assertEqual(
+            tx_examle_model.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        transaction_input = TransactionInputCoinbase.object_from_node_response(0, vin_example_coinbase, tx_examle_model)
+        tx_examle_model.update_source_addresses_root_cb([transaction_input])
+        self.assertEqual(
+            tx_examle_model.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000"
+        )
 
 
 class TransactionOutputTest(TestCase):
@@ -164,9 +197,7 @@ class TransactionInputTest(TestCase):
         self.transaction.save()
 
     def test_object_from_node_response(self):
-        tx_in1 = TransactionInput.object_from_node_response(
-            1, vin_example, vout_example, "73f91bcfcce2d2e830dec089d84653c678e6841cf375cdcc5518590cba5b2008"
-        )
+        tx_in1 = TransactionInput.object_from_node_response(1, vin_example, vout_example, self.transaction)
         self.assertEqual(isinstance(tx_in1, TransactionInput), True)
         self.assertEqual(tx_in1.n, 0)
         self.assertEqual(tx_in1.value, "1.13428769")
