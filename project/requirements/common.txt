@@ -7,10 +7,14 @@ django-types
 Django==5.1.1
 
 # postgres adapter
+py_flare_common==0.0.3
 psycopg[binary]==3.2.2
 
 # Django Extensions
 django-cors-headers==4.4.0
+
+# Flare libs
+eth-hash[pycryptodome]
 
 # Other
 requests==2.32.3

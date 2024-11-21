@@ -8,6 +8,19 @@ from configuration.config import get_testing_config
 from utxo_indexer.indexer.decorators import retry
 from utxo_indexer.indexer.doge import DogeClient
 from utxo_indexer.indexer.indexer_client import IndexerClient, new_session
+from utxo_indexer.indexer.types import PostProcessingMemoryElement
+from utxo_indexer.models import (
+    TransactionInput,
+    TransactionInputCoinbase,
+    UtxoTransaction,
+)
+from utxo_indexer.tests.data_for_testing.testing_models_data import (
+    tx_example1,
+    vin_example,
+    vin_example_coinbase,
+    vout_example,
+)
+from utxo_indexer.utils import merkle_tree_from_address_strings
 
 # DISABLE LOGGING
 logging.disable(logging.CRITICAL)
@@ -104,3 +117,43 @@ class IndexerClientTest(TestCase):
             self.indexerDoge.process_block(6)
         except NotImplementedError:
             AssertionError("proces_block method in DogeIndexerClient is undefined")
+
+    def test_update_source_addresses_root_from_tx_data(self):
+        tx = UtxoTransaction.object_from_node_response(tx_example1, 3127876, 1728884507)
+        cbi = TransactionInputCoinbase.object_from_node_response(0, vin_example_coinbase, tx)
+        inp = TransactionInput.object_from_node_response(0, vin_example, vout_example, tx)
+        t1 = PostProcessingMemoryElement(obj=tx, cbi=[], inp=[])
+        try:
+            self.indexerDoge.update_source_addresses_root_from_tx_data(t1)
+        except Exception:
+            pass
+        else:
+            raise AssertionError()
+
+        t2 = PostProcessingMemoryElement(obj=tx, cbi=[cbi], inp=[inp])
+        try:
+            self.indexerDoge.update_source_addresses_root_from_tx_data(t2)
+        except Exception:
+            pass
+        else:
+            raise AssertionError()
+
+        t3 = PostProcessingMemoryElement(obj=tx, cbi=[cbi], inp=[])
+        self.indexerDoge.update_source_addresses_root_from_tx_data(t3)
+        self.assertEqual(tx.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000")
+
+        t3 = PostProcessingMemoryElement(obj=tx, cbi=[cbi], inp=[])
+        self.indexerBTC.update_source_addresses_root_from_tx_data(t3)
+        self.assertEqual(tx.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000")
+
+        t4 = PostProcessingMemoryElement(obj=tx, cbi=[], inp=[inp])
+        self.indexerDoge.update_source_addresses_root_from_tx_data(t4)
+        root = merkle_tree_from_address_strings(["11tb1qq5yf3rn3dwsnjyt4h3npuqg4hedgsd56sc0jqz"]).root
+        assert root is not None
+        self.assertEqual(tx.source_addresses_root, root[2:])
+
+        t4 = PostProcessingMemoryElement(obj=tx, cbi=[], inp=[inp])
+        self.indexerBTC.update_source_addresses_root_from_tx_data(t4)
+        root = merkle_tree_from_address_strings(["11tb1qq5yf3rn3dwsnjyt4h3npuqg4hedgsd56sc0jqz"]).root
+        assert root is not None
+        self.assertEqual(tx.source_addresses_root, root[2:])

@@ -5,4 +5,13 @@ python manage.py migrate
 
 [ -z ${ADMIN_EMAIL+x} ] | [ -z ${ADMIN_PASSWORD+x} ] || python manage.py admin_user --email $ADMIN_EMAIL --password $ADMIN_PASSWORD
 
-exec uwsgi --chdir=/app --module=project.wsgi:application --env --master --protocol=uwsgi --socket=0.0.0.0:3030 --enable-threads --processes=2
+exec uwsgi \
+	--chdir /app \
+	--module project.wsgi:application \
+	--env \
+	--master \
+	--enable-threads \
+	--processes 2 \
+	--http 0.0.0.0:8400 \
+	--http-processes 2 \
+	--static-map /static=/tmp/staticroot

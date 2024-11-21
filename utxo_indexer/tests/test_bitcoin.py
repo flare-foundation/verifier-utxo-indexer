@@ -20,6 +20,7 @@ from utxo_indexer.models import (
     UtxoTransaction,
 )
 from utxo_indexer.tests.data_for_testing.testing_process_block_bitcoin_data import block_example_bitcoin
+from utxo_indexer.utils import merkle_tree_from_address_strings
 
 # DISABLE LOGGING
 logging.disable(logging.CRITICAL)
@@ -260,6 +261,17 @@ class BtcIndexerClientTest(TestCase):
         self.assertEqual(TransactionOutput.objects.count(), 4)
         tip_state = TipSyncState.instance()
         self.assertEqual(tip_state.latest_indexed_height, 33232)
+
+        tx1 = UtxoTransaction.objects.get(pk="ea57078c1ec6f4670fa3eb49c6486257ba36f9c49a0ad94d3b6cf631a2e92ae5")
+        assert tx1 is not None
+        self.assertEqual(tx1.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000")
+
+        tx2 = UtxoTransaction.objects.get(pk="cb09112278043f486e0e1b649d58c08e962958f2115d210f82f1ca9a13484ea2")
+        assert tx2 is not None
+        root = merkle_tree_from_address_strings(["tb1ql3u9666hjn28m0v2rulaqtwvqg3ewd543y66dy"]).root
+        assert root is not None
+        self.assertEqual(tx2.source_addresses_root, root[2:])
+
         # Nothing else needs to be tested here,
         # object_from_node_response and update_tip_state_done_block_process
         # have been tested already.
@@ -285,3 +297,25 @@ class BtcIndexerClientTest(TestCase):
     def test_run(self):
         """Test for run method"""
         pass
+
+
+class BtcIndexerClientRealBTCTest(TestCase):
+    def setUp(self):
+        self.configBTC = get_testing_config("BTC", "btc")
+        self.clientBTC = BtcClient(self.configBTC.NODE_RPC_URL)
+
+    def test_source_addresses_root(self):
+        """Test for source_addresses_root"""
+        """The results are compared with same tests in mcc library"""
+        TipSyncState.instance().delete()
+        indexerBTC = BtcIndexerClient(self.clientBTC, 60, self.configBTC)
+        indexerBTC.process_block(871299)
+        self.assertEqual(UtxoTransaction.objects.count(), 1747)
+
+        tx_cb = UtxoTransaction.objects.get(pk="203a8c661a241d25b1ea1da6fa36732118f39e169c22e227c68199ab729ab1ec")
+        self.assertEqual(
+            tx_cb.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        tx = UtxoTransaction.objects.get(pk="f5d78b32b1684f040c5142bd6a814f391a216dc39848c4c3e4cfd3f02336b1c9")
+        self.assertEqual(tx.source_addresses_root, "23699dbbba39d81c44489afe2da832f67038c710fbfb04a2be5a1a0e663da6be")

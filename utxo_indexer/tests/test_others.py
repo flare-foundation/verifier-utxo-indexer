@@ -16,7 +16,6 @@ from utxo_indexer.models import (
     UtxoBlock,
     UtxoTransaction,
 )
-from utxo_indexer.models.transaction import ZERO_REFERENCE
 
 # Note that all of the tests are using the DOGE mainnet blockchain.
 # See the .env.example file for the configuration.
@@ -173,7 +172,7 @@ class TransactionLogicTest(TestCase):
         self.assertEqual(coinbase_tx.transaction_id, tx_id)
         self.assertEqual(coinbase_tx.block_number, 4994995)
         self.assertEqual(coinbase_tx.timestamp, 1701867879)
-        self.assertEqual(coinbase_tx.payment_reference, ZERO_REFERENCE)
+        self.assertEqual(coinbase_tx.payment_reference, None)
         self.assertEqual(coinbase_tx.is_native_payment, False)
         self.assertEqual(coinbase_tx.transaction_type, "coinbase")
 
@@ -222,7 +221,7 @@ class TransactionLogicTest(TestCase):
         self.assertEqual(tx.transaction_id, tx_id)
         self.assertEqual(tx.block_number, 4994995)
         self.assertEqual(tx.timestamp, 1701867879)
-        self.assertEqual(tx.payment_reference, ZERO_REFERENCE)
+        self.assertEqual(tx.payment_reference, None)
         self.assertEqual(tx.is_native_payment, True)
         self.assertEqual(tx.transaction_type, "full_payment")
 

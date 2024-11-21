@@ -8,6 +8,7 @@ from requests.sessions import Session
 from client import BtcClient, DogeClient
 from configuration.config import config
 from configuration.types import Config
+from utxo_indexer.indexer.types import PostProcessingMemoryElement
 from utxo_indexer.models import (
     TipSyncState,
     TipSyncStateChoices,
@@ -130,17 +131,14 @@ class IndexerClient:
 
     # Base methods for interacting with node directly
 
-    # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_current_block_height(self, worker: Session) -> int:
         return self._client.get_block_height(worker)
 
-    # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_block_hash_from_height(self, block_height: int, worker: Session) -> str:
         return self._client.get_block_hash_from_height(worker, block_height)
 
-    # TODO:(matej) retry only on possible exceptions
     @retry(5)
     def _get_block_by_hash(self, block_hash: str, worker: Session) -> BlockResponse:
         return self._client.get_block_by_hash(worker, block_hash)
@@ -194,3 +192,14 @@ class IndexerClient:
             block_height (int): height of the block to process
         """
         raise NotImplementedError("Implement the block processing method")
+
+    def update_source_addresses_root_from_tx_data(self, processed_transaction: PostProcessingMemoryElement):
+        transaction_id = processed_transaction.obj.transaction_id
+        if len(processed_transaction.cbi) > 0 and len(processed_transaction.inp) > 0:
+            raise Exception(f"Cant have a combination of coinbase and regular inputs on tx {transaction_id}")
+        if len(processed_transaction.cbi) > 0:
+            processed_transaction.obj.update_source_addresses_root_cb(processed_transaction.cbi)
+        elif len(processed_transaction.inp) > 0:
+            processed_transaction.obj.update_source_addresses_root(processed_transaction.inp)
+        else:
+            raise Exception(f"Transaction has no inputs: {transaction_id}")

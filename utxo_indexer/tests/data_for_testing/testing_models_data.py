@@ -216,6 +216,19 @@ vout_example_dict = {
 }
 vout_example = cattrs.structure(vout_example_dict, VoutResponse)
 
+vout_example_dict2 = {
+    "value": "1.13428769",
+    "n": 0,
+    "scriptPubKey": {
+        "asm": "0 0508988e716ba1391175bc661e0115be5a88369a",
+        "hex": "00140508988e716ba1391175bc661e0115be5a88369a",
+        "address": "",
+        "type": "witness_v0_keyhash",
+        "reqSigs": 2,
+    },
+}
+vout_example2 = cattrs.structure(vout_example_dict2, VoutResponse)
+
 
 vin_example_coinbase_dict = {
     "coinbase": "0344ba2f00",
