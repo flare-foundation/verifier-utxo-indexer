@@ -28,20 +28,20 @@ class UtxoTransaction(models.Model):
     transactioninputcoinbase_set: models.Manager["TransactionInputCoinbase"]
     transactionoutput_set: models.Manager["TransactionOutput"]
 
-    transaction_id = HexString32ByteField(primary_key=True, db_column="transactionId")
+    transaction_id = HexString32ByteField(primary_key=True)
 
-    block_number = models.PositiveIntegerField(db_column="blockNumber")
-    timestamp = models.PositiveBigIntegerField(db_column="timestamp")
+    block_number = models.PositiveIntegerField()
+    timestamp = models.PositiveBigIntegerField()
 
     # Precalculated field to enable quick search for transactions to support attestation types
-    payment_reference = HexString32ByteField(db_column="paymentReference", null=True)
-    source_addresses_root = HexString32ByteField(db_column="sourceAddressesRoot")
+    payment_reference = HexString32ByteField(null=True)
+    source_addresses_root = HexString32ByteField()
 
     # All transactions but coinbase are native payment transactions
-    is_native_payment = models.BooleanField(default=False, db_column="isNativePayment")
+    is_native_payment = models.BooleanField(default=False)
 
     # TODO: consider update to enum field
-    transaction_type = models.CharField(db_column="transactionType")
+    transaction_type = models.CharField()
 
     # response = models.BinaryField(db_column="response")
 

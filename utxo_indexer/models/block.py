@@ -5,16 +5,16 @@ from utxo_indexer.models.types import BlockResponse
 
 
 class UtxoBlock(models.Model):
-    block_hash = HexString32ByteField(primary_key=True, db_column="blockHash")
+    block_hash = HexString32ByteField(primary_key=True)
 
-    block_number = models.PositiveIntegerField(db_column="blockNumber")
-    timestamp = models.PositiveBigIntegerField(db_column="timestamp")
-    previous_block_hash = HexString32ByteField(db_column="previousBlockHash")
+    block_number = models.PositiveIntegerField()
+    timestamp = models.PositiveBigIntegerField()
+    previous_block_hash = HexString32ByteField()
 
     # Number of transactions in block
-    transactions = models.PositiveIntegerField(db_column="transactions")
+    transactions = models.PositiveIntegerField()
 
-    confirmed = models.BooleanField(default=False, db_column="confirmed")
+    confirmed = models.BooleanField(default=False)
 
     class Meta:
         indexes = (

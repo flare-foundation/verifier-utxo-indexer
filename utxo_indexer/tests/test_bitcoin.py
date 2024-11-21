@@ -301,7 +301,7 @@ class BtcIndexerClientTest(TestCase):
 
 class BtcIndexerClientRealBTCTest(TestCase):
     def setUp(self):
-        self.configBTC = get_testing_config("BTC_V3", "btc")
+        self.configBTC = get_testing_config("BTC", "btc")
         self.clientBTC = BtcClient(self.configBTC.NODE_RPC_URL)
 
     def test_source_addresses_root(self):

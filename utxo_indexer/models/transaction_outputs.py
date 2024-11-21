@@ -6,15 +6,15 @@ from utxo_indexer.models.types import CoinbaseVinResponse, VinResponse, VoutResp
 
 
 class AbstractTransactionOutput(models.Model):
-    n = models.PositiveIntegerField(db_column="n")
+    n = models.PositiveIntegerField()
     # currently total circulating supply fits in 20 digits
-    value = models.CharField(db_column="value")
+    value = models.CharField()
 
-    script_key_asm = models.CharField(db_column="scriptKeyAsm")
-    script_key_hex = models.CharField(db_column="scriptKeyHex")
-    script_key_req_sigs = models.CharField(blank=True, null=True, db_column="scriptKeyReqSigs")
-    script_key_type = models.CharField(db_column="scriptKeyType")
-    script_key_address = models.CharField(max_length=128, db_column="scriptKeyAddress")
+    script_key_asm = models.CharField()
+    script_key_hex = models.CharField()
+    script_key_req_sigs = models.CharField(blank=True, null=True)
+    script_key_type = models.CharField()
+    script_key_address = models.CharField(max_length=128)
 
     class Meta:
         abstract = True
@@ -52,10 +52,10 @@ class TransactionInputCoinbase(models.Model):
     transaction_link = models.ForeignKey("UtxoTransaction", on_delete=models.CASCADE)
 
     # Position in vin array of transaction (always 0 for coinbase)
-    vin_n = models.PositiveIntegerField(db_column="vinN")
+    vin_n = models.PositiveIntegerField()
 
-    vin_coinbase = models.CharField(db_column="vinCoinbase")
-    vin_sequence = models.PositiveBigIntegerField(db_column="vinSequence")
+    vin_coinbase = models.CharField()
+    vin_sequence = models.PositiveBigIntegerField()
 
     def __str__(self) -> str:
         return f"Coinbase vin for tx: {self.transaction_link.transaction_id}"
@@ -77,15 +77,15 @@ class TransactionInput(AbstractTransactionOutput):
     transaction_link = models.ForeignKey("UtxoTransaction", on_delete=models.CASCADE)
 
     # Position in vin array of transaction
-    vin_n = models.PositiveIntegerField(db_column="vinN")
+    vin_n = models.PositiveIntegerField()
 
-    vin_previous_txid = HexString32ByteField(db_column="vinPreviousTxid")
-    vin_vout_index = models.PositiveIntegerField(db_column="vinVoutIndex")
+    vin_previous_txid = HexString32ByteField()
+    vin_vout_index = models.PositiveIntegerField()
 
     # TODO: remove if not used
-    vin_sequence = models.PositiveBigIntegerField(db_column="vinSequence")
-    vin_script_sig_asm = models.CharField(db_column="vinScriptSigAsm")
-    vin_script_sig_hex = models.CharField(db_column="vinScriptSigHex")
+    vin_sequence = models.PositiveBigIntegerField()
+    vin_script_sig_asm = models.CharField()
+    vin_script_sig_hex = models.CharField()
 
     # TODO: Add witness data to db if needed
 
