@@ -297,3 +297,25 @@ class BtcIndexerClientTest(TestCase):
     def test_run(self):
         """Test for run method"""
         pass
+
+
+class BtcIndexerClientRealBTCTest(TestCase):
+    def setUp(self):
+        self.configBTC = get_testing_config("BTC_V3", "btc")
+        self.clientBTC = BtcClient(self.configBTC.NODE_RPC_URL)
+
+    def test_source_addresses_root(self):
+        """Test for source_addresses_root"""
+        """The results are compared with same tests in mcc library"""
+        TipSyncState.instance().delete()
+        indexerBTC = BtcIndexerClient(self.clientBTC, 60, self.configBTC)
+        indexerBTC.process_block(871299)
+        self.assertEqual(UtxoTransaction.objects.count(), 1747)
+
+        tx_cb = UtxoTransaction.objects.get(pk="203a8c661a241d25b1ea1da6fa36732118f39e169c22e227c68199ab729ab1ec")
+        self.assertEqual(
+            tx_cb.source_addresses_root, "0000000000000000000000000000000000000000000000000000000000000000"
+        )
+
+        tx = UtxoTransaction.objects.get(pk="f5d78b32b1684f040c5142bd6a814f391a216dc39848c4c3e4cfd3f02336b1c9")
+        self.assertEqual(tx.source_addresses_root, "23699dbbba39d81c44489afe2da832f67038c710fbfb04a2be5a1a0e663da6be")
