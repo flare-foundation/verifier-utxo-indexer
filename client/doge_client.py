@@ -2,7 +2,15 @@ import cattrs
 from requests.sessions import Session
 
 from configuration.config import config
-from utxo_indexer.models.types import BlockResponse, TransactionResponse
+from utxo_indexer.models.types import (
+    BlockResponse,
+    CoinbaseVinResponse,
+    ScriptPubKeyResponse,
+    ScriptSigResponse,
+    TransactionResponse,
+    VinResponse,
+    VoutResponse,
+)
 
 
 class DogeClient:
@@ -48,7 +56,48 @@ class DogeClient:
 
         # Handle address, reqSigs and prevout
         tx = self._check_address_reqSigs_prevout(tx)
-        return cattrs.structure(tx, TransactionResponse)
+
+        vout_list = []
+        for _vout in tx["vout"]:
+            _spk = _vout["scriptPubKey"]
+            script_pub_key = ScriptPubKeyResponse(
+                reqSigs=_spk["reqSigs"],
+                address=_spk["address"],
+                type=_spk["type"],
+                asm=_spk["asm"],
+                hex=_spk["hex"],
+            )
+            vout = VoutResponse(
+                n=_vout["n"],
+                value=_vout["value"],
+                scriptPubKey=script_pub_key,
+            )
+            vout_list.append(vout)
+
+        vin_list = []
+        for _vin in tx["vin"]:
+            if "coinbase" in _vin:
+                coinb = CoinbaseVinResponse(
+                    coinbase=_vin["coinbase"],
+                    sequence=_vin["sequence"],
+                )
+                vin_list.append(coinb)
+
+            _ss = _vin["scriptSig"]
+            script_sig = ScriptSigResponse(
+                asm=_ss["asm"],
+                hex=_ss["hex"],
+            )
+            vin = VinResponse(
+                txid=_vin["txid"],
+                sequence=_vin["sequence"],
+                vout=_vin["vout"],
+                prevout=_vin["prevout"],
+                scriptSig=script_sig,
+            )
+            vout_list.append(vin)
+
+        return TransactionResponse(txid=tx["txid"], vout=vout_list, vin=vin_list)
 
     def get_block_by_hash(self, session: Session, block_hash: str) -> BlockResponse:
         """Returns a block presented with class types."""
