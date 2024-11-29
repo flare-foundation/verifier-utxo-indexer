@@ -59,13 +59,13 @@ class DogeClient:
 
         vout_list = []
         for _vout in tx["vout"]:
-            _spk = _vout["scriptPubKey"]
+            _scriptPubKey = _vout["scriptPubKey"]
             script_pub_key = ScriptPubKeyResponse(
-                reqSigs=_spk["reqSigs"],
-                address=_spk["address"],
-                type=_spk["type"],
-                asm=_spk["asm"],
-                hex=_spk["hex"],
+                reqSigs=_scriptPubKey["reqSigs"],
+                address=_scriptPubKey["address"],
+                type=_scriptPubKey["type"],
+                asm=_scriptPubKey["asm"],
+                hex=_scriptPubKey["hex"],
             )
             vout = VoutResponse(
                 n=_vout["n"],
@@ -77,25 +77,25 @@ class DogeClient:
         vin_list = []
         for _vin in tx["vin"]:
             if "coinbase" in _vin:
-                coinb = CoinbaseVinResponse(
+                coinbase = CoinbaseVinResponse(
                     coinbase=_vin["coinbase"],
                     sequence=_vin["sequence"],
                 )
-                vin_list.append(coinb)
-
-            _ss = _vin["scriptSig"]
-            script_sig = ScriptSigResponse(
-                asm=_ss["asm"],
-                hex=_ss["hex"],
-            )
-            vin = VinResponse(
-                txid=_vin["txid"],
-                sequence=_vin["sequence"],
-                vout=_vin["vout"],
-                prevout=_vin["prevout"],
-                scriptSig=script_sig,
-            )
-            vout_list.append(vin)
+                vin_list.append(coinbase)
+            else:
+                _scriptSig = _vin["scriptSig"]
+                scriptsig = ScriptSigResponse(
+                    asm=_scriptSig["asm"],
+                    hex=_scriptSig["hex"],
+                )
+                vin = VinResponse(
+                    txid=_vin["txid"],
+                    sequence=_vin["sequence"],
+                    vout=_vin["vout"],
+                    prevout=_vin["prevout"],
+                    scriptSig=scriptsig,
+                )
+                vin_list.append(vin)
 
         return TransactionResponse(txid=tx["txid"], vout=vout_list, vin=vin_list)
 
