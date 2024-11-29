@@ -48,8 +48,14 @@ def process_pre_vout_transaction(
 
     def _process_pre_vout_transaction(session: Session, processed_block: BlockProcessorMemory):
         txid, vout_n = vin.txid, vin.vout
-        res = transaction_getter(txid, session)
-        prevout_res = res.vout[vout_n]
+        # Memo:
+        vout = TransactionOutput.objects.filter(transaction_link__transaction_id=txid, n=vout_n).first()
+        prevout_res = None
+        if vout is not None:
+            prevout_res = vout.to_vout_response()
+        else:
+            res = transaction_getter(txid, session)
+            prevout_res = res.vout[vout_n]
         input_object = TransactionInput.object_from_node_response(vin_n, vin, prevout_res, tx_link)
         processed_block.vins.append(TransactionInput.object_from_node_response(vin_n, vin, prevout_res, tx_link))
         return input_object
@@ -97,13 +103,13 @@ class DogeIndexerClient(IndexerClient):
                         TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link)
                     )
                 else:
+                    # CONSIDER: consider adding memeo here to not fill the queue
                     process_queue.put(process_pre_vout_transaction(vin, vin_n, tx_link, self._get_transaction))
             for vout in tx.vout:
                 processed_block.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
 
         # multithreading part of the processing
         workers = []
-
         for worker_index in range(len(self.workers)):
             t = threading.Thread(
                 target=thread_worker, args=(self.workers[worker_index], process_queue, processed_block)

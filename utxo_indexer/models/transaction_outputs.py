@@ -2,7 +2,7 @@ from django.db import models
 
 from utxo_indexer.models.model_utils import HexString32ByteField
 from utxo_indexer.models.transaction import UtxoTransaction
-from utxo_indexer.models.types import CoinbaseVinResponse, VinResponse, VoutResponse
+from utxo_indexer.models.types import CoinbaseVinResponse, ScriptPubKeyResponse, VinResponse, VoutResponse
 
 
 class AbstractTransactionOutput(models.Model):
@@ -12,6 +12,7 @@ class AbstractTransactionOutput(models.Model):
 
     script_key_asm = models.CharField()
     script_key_hex = models.CharField()
+    # TODO: make this an integer
     script_key_req_sigs = models.CharField(blank=True, null=True)
     script_key_type = models.CharField()
     script_key_address = models.CharField(max_length=128)
@@ -45,6 +46,19 @@ class TransactionOutput(AbstractTransactionOutput):
             script_key_req_sigs=script_pub_key.reqSigs,
             script_key_type=script_pub_key.type,
             script_key_address=script_pub_key.address,
+        )
+
+    def to_vout_response(self) -> VoutResponse:
+        return VoutResponse(
+            n=self.n,
+            value=self.value,
+            scriptPubKey=ScriptPubKeyResponse(
+                reqSigs=int(self.script_key_req_sigs) if self.script_key_req_sigs else None,
+                address=self.script_key_address,
+                type=self.script_key_type,
+                asm=self.script_key_asm,
+                hex=self.script_key_hex,
+            ),
         )
 
 

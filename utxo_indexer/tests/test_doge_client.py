@@ -68,15 +68,18 @@ class DogeClientTest(TestCase):
         tx = self.clientDoge.get_transaction(self.session, txid)
         # Testing types
         self.assertEqual(isinstance(tx, TransactionResponse), True)
-        self.assertEqual(isinstance(tx.vin[0], VinResponse), True)
-        assert isinstance(tx.vin[0], VinResponse)
-        self.assertEqual(isinstance(tx.vin[0].scriptSig, ScriptSigResponse), True)
-        self.assertEqual(isinstance(tx.vout[0], VoutResponse), True)
-        self.assertEqual(isinstance(tx.vout[0].scriptPubKey, ScriptPubKeyResponse), True)
+        for vin in tx.vin:
+            self.assertEqual(isinstance(vin, VinResponse), True)
+            assert isinstance(vin, VinResponse)
+            self.assertEqual(isinstance(vin.scriptSig, ScriptSigResponse), True)
+        for vout in tx.vout:
+            self.assertEqual(isinstance(vout, VoutResponse), True)
+            self.assertEqual(isinstance(vout.scriptPubKey, ScriptPubKeyResponse), True)
         # We are testing only the attributes of the transaction that are later used.
         self.assertEqual(tx.txid, txid)
         self.assertEqual(len(tx.vout), 1)
         self.assertEqual(len(tx.vin), 5)
+        assert isinstance(tx.vin[0], VinResponse)
         self.assertEqual(tx.vin[0].txid, "fde8896126ed1f46fac9c6761e08fdcfb3455a7a6c474e6a3d147096e84bd705")
         self.assertEqual(tx.vin[0].sequence, 4294967295)
         self.assertEqual(tx.vin[0].vout, 1)
