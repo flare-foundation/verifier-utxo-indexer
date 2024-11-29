@@ -103,7 +103,7 @@ class DogeIndexerClient(IndexerClient):
                         TransactionInputCoinbase.object_from_node_response(vin_n, vin, tx_link)
                     )
                 else:
-                    # TODO: consider adding memeo here to not fill the queue
+                    # CONSIDER: consider adding memeo here to not fill the queue
                     process_queue.put(process_pre_vout_transaction(vin, vin_n, tx_link, self._get_transaction))
             for vout in tx.vout:
                 processed_block.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
