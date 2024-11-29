@@ -49,7 +49,6 @@ class IndexerClient:
             self.workers = [new_session(instance_config)]
         else:
             self.workers = [new_session(instance_config) for _ in range(instance_config.NUMBER_OF_WORKERS)]
-        print("Number of workers: ", len(self.workers))
 
         self.toplevel_worker = self.workers[0]
         assert expected_production > 0, "Expected block production time should be positive"
@@ -65,6 +64,7 @@ class IndexerClient:
         """
 
         logger.info("Extracting initial block height")
+        logger.info("Number of active workeres: %s", len(self.workers))
 
         latest_block = UtxoBlock.objects.order_by("block_number").last()
         if latest_block is not None:
