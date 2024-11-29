@@ -1,6 +1,5 @@
 import logging
 import threading
-import time
 from queue import Queue
 from typing import Callable
 
@@ -73,15 +72,11 @@ class DogeIndexerClient(IndexerClient):
     def process_block(self, block_height: int):
         # NOTICE: we always assume that block processing is for blocks that are for sure on main branch of the blockchain
 
-        start_time = time.time()
-
         processed_block = BlockProcessorMemory()
         process_queue: Queue = Queue()
 
         block_hash = self._get_block_hash_from_height(block_height, self.toplevel_worker)
         res_block = self._get_block_by_hash(block_hash, self.toplevel_worker)
-
-        toplevel_block_processing_time = time.time()
 
         # Update the block info in DB, indicating it has processed transactions once we proceeded them
         # do it within transaction atomic update
@@ -91,8 +86,6 @@ class DogeIndexerClient(IndexerClient):
             block_num=res_block.height,
             block_ts=res_block.mediantime,
         )
-
-        tlb_response_to_object = time.time()
 
         # Put all of the transaction in block on the processing queue
         for tx in res_block.tx:
@@ -108,12 +101,8 @@ class DogeIndexerClient(IndexerClient):
             for vout in tx.vout:
                 processed_block.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
 
-        worker_prep_time = time.time()
-
         # multithreading part of the processing
         workers = []
-        print("Number of workers: ", len(self.workers))
-
         for worker_index in range(len(self.workers)):
             t = threading.Thread(
                 target=thread_worker, args=(self.workers[worker_index], process_queue, processed_block)
@@ -122,8 +111,6 @@ class DogeIndexerClient(IndexerClient):
             t.start()
 
         [t.join() for t in workers]
-
-        processing_time = time.time()
 
         if not process_queue.empty():
             raise Exception("Queue should be empty after processing")
@@ -145,12 +132,8 @@ class DogeIndexerClient(IndexerClient):
                 raise Exception("Post processing fail in regular inputs loop")
             postprocess_obj[txid].inp.append(tinp)
 
-        post_processing_time = time.time()
-
         for processed_transaction in postprocess_obj.values():
             self.update_source_addresses_root_from_tx_data(processed_transaction)
-
-        post_post_processing_time = time.time()
 
         with transaction.atomic():
             UtxoTransaction.objects.bulk_create(processed_block.tx, batch_size=999)
@@ -159,16 +142,3 @@ class DogeIndexerClient(IndexerClient):
             TransactionOutput.objects.bulk_create(processed_block.vouts, batch_size=999)
             UtxoBlock.objects.bulk_create([block_db])
             self.update_tip_state_done_block_process(block_height)
-
-        db_save_time = time.time()
-
-        print(f"Block processing: {block_height} took: {time.time() - start_time} ")
-        print(
-            f"toplevel_block_processing_time: {toplevel_block_processing_time - start_time}\n"
-            f"tlb_response_to_object: {tlb_response_to_object - toplevel_block_processing_time}\n"
-            f"worker_prep_time: {worker_prep_time - tlb_response_to_object}\n"
-            f"processing_time: {processing_time- worker_prep_time}\n"
-            f"post_processing_time: {post_processing_time- processing_time}\n"
-            f"post_post_processing_time: {post_post_processing_time-post_processing_time}\n"
-            f"db_save_time: {db_save_time- post_post_processing_time}"
-        )

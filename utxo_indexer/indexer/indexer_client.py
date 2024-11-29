@@ -49,6 +49,7 @@ class IndexerClient:
             self.workers = [new_session(instance_config)]
         else:
             self.workers = [new_session(instance_config) for _ in range(instance_config.NUMBER_OF_WORKERS)]
+        print("Number of workers: ", len(self.workers))
 
         self.toplevel_worker = self.workers[0]
         assert expected_production > 0, "Expected block production time should be positive"
