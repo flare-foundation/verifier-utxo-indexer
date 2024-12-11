@@ -7,6 +7,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     # uncomment if you need to connect to db outside of docker, eg: pgadmin
+    command: postgres -c max_wal_size=2GB
     ports:
       - "127.0.0.1:${DB_PROXY_PORT}:5432"
     # uncomment to persist db data between downs
