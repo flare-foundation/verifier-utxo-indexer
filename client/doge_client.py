@@ -139,3 +139,15 @@ class DogeClient:
             },
         ).json(parse_float=str)["result"]
         return height
+
+    def get_network_info(self, session: Session) -> str:
+        info = self._post(
+            session,
+            {
+                "jsonrpc": "1.0",
+                "id": "rpc",
+                "method": "getinfo",
+                "params": [],
+            },
+        ).json(parse_float=str)["result"]
+        return f"version: {info['version']}, protocolversion: {info['protocolversion']}"
