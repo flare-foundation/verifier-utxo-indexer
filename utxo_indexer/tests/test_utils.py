@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from utxo_indexer.utils import is_valid_bytes_32_hex, merkle_tree_from_address_strings, un_prefix_0x
+from utxo_indexer.utils import ZERO_BYTES_32, is_valid_bytes_32_hex, merkle_tree_from_address_strings, un_prefix_0x
 
 
 class UtilsTest(TestCase):
@@ -21,6 +21,10 @@ class UtilsTest(TestCase):
         self.assertEqual(is_valid_bytes_32_hex(string2), True)
         self.assertEqual(is_valid_bytes_32_hex(string3), False)
         self.assertEqual(is_valid_bytes_32_hex(string4), False)
+
+    def test_merkle_tree_empty(self):
+        """Test for merkle_tree_from_address_strings function with empty list"""
+        self.assertEqual(merkle_tree_from_address_strings([None]).root, "0x" + ZERO_BYTES_32)
 
     def test_merkle_tree_from_address_strings_and_string_to_ascii_hex(self):
         data = [
