@@ -64,11 +64,11 @@ class UtxoTransaction(models.Model):
                 addresses.append(input.script_key_address)
             else:
                 addresses.append(None)
-        return self._construct_address_root(addresses)
+        self.source_addresses_root = self._construct_address_root(addresses)
 
     def update_source_addresses_root_cb(self, inputs: List["TransactionInputCoinbase"]):
         addresses = [None]
-        return self._construct_address_root(addresses)
+        self.source_addresses_root = self._construct_address_root(addresses)
 
     def _construct_address_root(self, addresses: Sequence[str | None]) -> str:
         tree = merkle_tree_from_address_strings(addresses)
