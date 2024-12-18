@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Sequence
 
 from django.db import models
 
@@ -64,14 +64,17 @@ class UtxoTransaction(models.Model):
                 addresses.append(input.script_key_address)
             else:
                 addresses.append(None)
-        tree = merkle_tree_from_address_strings(addresses)
-        if tree.root is None:
-            self.source_addresses_root = ZERO_SOURCE_ADDRESS_ROOT
-        else:
-            self.source_addresses_root = un_prefix_0x(tree.root)
+        self.source_addresses_root = self._construct_address_root(addresses)
 
     def update_source_addresses_root_cb(self, inputs: List["TransactionInputCoinbase"]):
-        self.source_addresses_root = ZERO_SOURCE_ADDRESS_ROOT
+        addresses = [None]
+        self.source_addresses_root = self._construct_address_root(addresses)
+
+    def _construct_address_root(self, addresses: Sequence[str | None]) -> str:
+        tree = merkle_tree_from_address_strings(addresses)
+        if tree.root is None:
+            return ZERO_SOURCE_ADDRESS_ROOT
+        return un_prefix_0x(tree.root)
 
     @classmethod
     def object_from_node_response(cls, response: TransactionResponse, block_number: int, timestamp: int):

@@ -144,6 +144,10 @@ class IndexerClient:
     def _get_block_by_hash(self, block_hash: str, worker: Session) -> BlockResponse:
         return self._client.get_block_by_hash(worker, block_hash)
 
+    @retry(5)
+    def _get_network_info(self, worker: Session) -> str:
+        return self._client.get_network_info(worker)
+
     # Tip state management
     def update_tip_state_indexing(self, block_tip_height: int):
         """

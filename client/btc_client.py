@@ -79,3 +79,17 @@ class BtcClient:
             },
         ).json(parse_float=str)["result"]
         return height
+
+    def get_network_info(self, session: Session) -> str:
+        info = self._post(
+            session,
+            {
+                "jsonrpc": "1.0",
+                "id": "rpc",
+                "method": "getnetworkinfo",
+                "params": [],
+            },
+        ).json(parse_float=str)["result"]
+        return (
+            f"version: {info['version']}, subversion: {info['subversion']}, protocolversion: {info['protocolversion']}"
+        )

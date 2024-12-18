@@ -2,6 +2,7 @@
 
 python manage.py collectstatic --no-input
 python manage.py migrate
+python manage.py make_config
 
 [ -z ${ADMIN_EMAIL+x} ] | [ -z ${ADMIN_PASSWORD+x} ] || python manage.py admin_user --email $ADMIN_EMAIL --password $ADMIN_PASSWORD
 
