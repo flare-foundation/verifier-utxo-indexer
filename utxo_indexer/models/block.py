@@ -31,8 +31,8 @@ class UtxoBlock(models.Model):
         return cls(
             block_number=response.height,
             timestamp=response.mediantime,
-            block_hash=response.hash,
-            previous_block_hash=response.previousblockhash,
+            block_hash=response.hash.lower(),
+            previous_block_hash=response.previousblockhash.lower(),
             transactions=len(response.tx),
             confirmed=True,
         )

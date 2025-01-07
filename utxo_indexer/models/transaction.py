@@ -74,7 +74,7 @@ class UtxoTransaction(models.Model):
         tree = merkle_tree_from_address_strings(addresses)
         if tree.root is None:
             return ZERO_SOURCE_ADDRESS_ROOT
-        return un_prefix_0x(tree.root)
+        return un_prefix_0x(tree.root).lower()
 
     @classmethod
     def object_from_node_response(cls, response: TransactionResponse, block_number: int, timestamp: int):
@@ -84,7 +84,7 @@ class UtxoTransaction(models.Model):
             return cls(
                 block_number=block_number,
                 timestamp=timestamp,
-                transaction_id=response.txid,
+                transaction_id=response.txid.lower(),
                 payment_reference=None,
                 is_native_payment=False,
                 transaction_type="coinbase",
@@ -93,7 +93,7 @@ class UtxoTransaction(models.Model):
         return cls(
             block_number=block_number,
             timestamp=timestamp,
-            transaction_id=response.txid,
+            transaction_id=response.txid.lower(),
             payment_reference=ref,
             is_native_payment=True,
             transaction_type="full_payment",
@@ -129,5 +129,5 @@ class UtxoTransaction(models.Model):
                         std_references.append(message)
 
         if len(std_references) == 1:
-            return std_references[0]
+            return std_references[0].lower()
         return None
