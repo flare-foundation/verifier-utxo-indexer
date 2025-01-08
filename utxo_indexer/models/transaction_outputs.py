@@ -42,9 +42,9 @@ class TransactionOutput(AbstractTransactionOutput):
             n=response.n,
             value=response.value,
             script_key_asm=script_pub_key.asm,
-            script_key_hex=script_pub_key.hex,
+            script_key_hex=script_pub_key.hex.lower(),
             script_key_req_sigs=script_pub_key.reqSigs,
-            script_key_type=script_pub_key.type,
+            script_key_type=script_pub_key.type.lower(),
             script_key_address=script_pub_key.address,
         )
 
@@ -82,7 +82,7 @@ class TransactionInputCoinbase(models.Model):
         return cls(
             transaction_link=transaction_link,
             vin_n=vin_n,
-            vin_coinbase=vin_response.coinbase,
+            vin_coinbase=vin_response.coinbase.lower(),
             vin_sequence=vin_response.sequence,
         )
 
@@ -126,14 +126,14 @@ class TransactionInput(AbstractTransactionOutput):
             n=vout_response.n,
             value=vout_response.value,
             script_key_asm=vout_script_pub_key.asm,
-            script_key_hex=vout_script_pub_key.hex,
+            script_key_hex=vout_script_pub_key.hex.lower(),
             script_key_req_sigs=vout_script_pub_key.reqSigs,
-            script_key_type=vout_script_pub_key.type,
+            script_key_type=vout_script_pub_key.type.lower(),
             script_key_address=vout_script_pub_key.address,
             # vin part
-            vin_previous_txid=vin_response.txid,
+            vin_previous_txid=vin_response.txid.lower(),
             vin_vout_index=vin_response.vout,
             vin_sequence=vin_response.sequence,
-            vin_script_sig_asm=vin_response.scriptSig.asm,
-            vin_script_sig_hex=vin_response.scriptSig.hex,
+            vin_script_sig_asm=vin_response.scriptSig.asm.lower(),
+            vin_script_sig_hex=vin_response.scriptSig.hex.lower(),
         )
