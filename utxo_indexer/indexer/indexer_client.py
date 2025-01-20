@@ -44,13 +44,9 @@ class IndexerClient:
         self._client = client
         self.instance_config = instance_config
 
-        # BtcClient only needs one worker
-        if isinstance(self._client, BtcClient):
-            self.workers = [new_session(instance_config)]
-        else:
-            self.workers = [new_session(instance_config) for _ in range(instance_config.NUMBER_OF_WORKERS)]
+        # create workers / connect ititial seesions
+        self.connect_workers()
 
-        self.toplevel_worker = self.workers[0]
         assert expected_production > 0, "Expected block production time should be positive"
         self.expected_block_production_time = expected_production
 
@@ -58,13 +54,44 @@ class IndexerClient:
         self.latest_indexed_block_height = self.extract_initial_block_height()
         self.latest_tip_block_height = 0
 
+    def connect_workers(self) -> None:
+        """
+        Connects all workers to the node
+        """
+        # BtcClient only needs one worker
+        if isinstance(self._client, BtcClient):
+            self.workers = [new_session(self.instance_config)]
+        else:
+            self.workers = [new_session(self.instance_config) for _ in range(self.instance_config.NUMBER_OF_WORKERS)]
+        self.toplevel_worker = self.workers[0]
+
+    def kill_workers(self) -> None:
+        """
+        Kills all workers
+        """
+        for worker in self.workers:
+            worker.close()
+        self.workers = []
+        self.toplevel_worker = None
+
+    def ensure_workers(self) -> None:
+        """
+        Ensures that all workers are connected
+        """
+        if len(self.workers) == 0 or self.toplevel_worker is None:
+            self.connect_workers()
+            logger.info("Reconnected workers")
+
     def extract_initial_block_height(self) -> int:
         """
         Extracts the initial block height from the config
         """
 
         logger.info("Extracting initial block height")
+        self.ensure_workers()
         logger.info("Number of active workeres: %s", len(self.workers))
+
+        assert self.toplevel_worker is not None, "Toplevel worker should be connected and defined"
 
         latest_block = UtxoBlock.objects.order_by("block_number").last()
         if latest_block is not None:
@@ -107,6 +134,8 @@ class IndexerClient:
         """
         logger.info("Starting the indexer")
         while True:
+            self.ensure_workers()
+            assert self.toplevel_worker is not None, "Toplevel worker should be connected and defined"
             height = self._get_current_block_height(self.toplevel_worker)
 
             if self.latest_tip_block_height < height:
@@ -128,6 +157,7 @@ class IndexerClient:
                     f"No new blocks to process, indexed/latest: {self.latest_indexed_block_height}/{height} sleeping for {self.instance_config.INDEXER_POLL_INTERVAL} seconds"
                 )
                 self.update_tip_state_idle()
+                self.kill_workers()
                 time.sleep(self.instance_config.INDEXER_POLL_INTERVAL)
 
     # Base methods for interacting with node directly
