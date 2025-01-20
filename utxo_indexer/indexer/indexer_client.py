@@ -14,6 +14,7 @@ from utxo_indexer.models import (
     TipSyncStateChoices,
     UtxoBlock,
 )
+from utxo_indexer.models.sync_state import PruneSyncState
 from utxo_indexer.models.types import BlockResponse
 
 from .decorators import retry
@@ -133,6 +134,8 @@ class IndexerClient:
         Runs the indexing process in a endless loop
         """
         logger.info("Starting the indexer")
+        # Make sure prune state is initialized
+        self.initialize_bottom_state()
         while True:
             self.ensure_workers()
             assert self.toplevel_worker is not None, "Toplevel worker should be connected and defined"
@@ -218,6 +221,14 @@ class IndexerClient:
         tip_state.sync_state = TipSyncStateChoices.syncing
         tip_state.timestamp = int(time.time())
         tip_state.save()
+
+    # Bottom/Prune state managment
+    def initialize_bottom_state(self):
+        prune_state = PruneSyncState.instance()
+        prune_state.timestamp = int(time.time())
+        if prune_state.latest_indexed_tail_height == 0:
+            prune_state.latest_indexed_tail_height = self.latest_indexed_block_height
+        prune_state.save()
 
     def process_block(self, block_height: int):
         """

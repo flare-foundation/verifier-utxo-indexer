@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('utxo_indexer', '0002_version'),
+        ('utxo_indexer', '0002_config'),
     ]
 
     operations = [
