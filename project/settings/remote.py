@@ -42,7 +42,7 @@ except FileNotFoundError:
 
 try:
     with open(os.path.join(BASE_DIR, "PROJECT_BUILD_DATE")) as f:
-        PROJECT_BUILD_DATE = f.read().strip()
+        PROJECT_BUILD_DATE = datetime.fromisoformat(f.read().strip())
 except FileNotFoundError:
     pass
 
