@@ -1,14 +1,12 @@
 import os
-from datetime import datetime
-
-from django.utils.timezone import make_aware
+import datetime
 
 # AFLABS PROJECT SETTINGS
 PROJECT_NAME = "UTXO Indexer"
 PROJECT_SETTINGS = os.environ.get("DJANGO_SETTINGS_MODULE", "project.settings.local")
 PROJECT_COMMIT_HASH = "local"
 PROJECT_VERSION = "local"
-PROJECT_BUILD_DATE = make_aware(datetime.now())  # noqa: DTZ005
+PROJECT_BUILD_DATE = datetime.datetime.now(tz=datetime.UTC).isoformat()  # noqa: DTZ005
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
