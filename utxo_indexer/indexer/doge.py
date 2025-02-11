@@ -24,12 +24,18 @@ logger = logging.getLogger(__name__)
 
 
 def thread_worker(session: Session, process_queue: Queue, processed_block: BlockProcessorMemory):
-    while not process_queue.empty():
+    while True:
         item = process_queue.get()
-        if callable(item):
-            item(session, processed_block)
-        else:
-            raise Exception("Item in queue is not callable")
+        if item is None:
+            process_queue.task_done()
+            break
+        try:
+            if callable(item):
+                item(session, processed_block)
+            else:
+                raise Exception("Item in queue is not callable")
+        finally:
+            process_queue.task_done()
 
 
 def process_pre_vout_transaction(
@@ -41,16 +47,16 @@ def process_pre_vout_transaction(
     """Return the function that processes the transaction prevouts and link it to the spending transaction
 
     Args:
-        vin (IUtxoVinTransaction): vin object from spending transaction
-        vin_n (int): index of vin in spending transaction
-        tx_link (str): transaction id of spending transaction
+        vin (VinResponse): vin object from spending transaction.
+        vin_n (int): index of vin in spending transaction.
+        tx_link (UtxoTransaction): transaction object of spending transaction.
+        transaction_getter (Callable): function to retrieve transaction details.
     """
 
     def _process_pre_vout_transaction(session: Session, processed_block: BlockProcessorMemory):
         txid, vout_n = vin.txid, vin.vout
         # Memo:
         vout = TransactionOutput.objects.filter(transaction_link__transaction_id=txid, n=vout_n).first()
-        prevout_res = None
         if vout is not None:
             prevout_res = vout.to_vout_response()
         else:
@@ -108,16 +114,26 @@ class DogeIndexerClient(IndexerClient):
             for vout in tx.vout:
                 processed_block.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
 
-        # multithreading part of the processing
+        # Add one sentinel (None) per worker so each thread knows when to exit.
+        num_workers = len(self.workers)
+        for _ in range(num_workers):
+            process_queue.put(None)
+
+        # Launch worker threads.
         workers = []
-        for worker_index in range(len(self.workers)):
+        for worker_index in range(num_workers):
             t = threading.Thread(
                 target=thread_worker, args=(self.workers[worker_index], process_queue, processed_block)
             )
             workers.append(t)
             t.start()
 
-        [t.join() for t in workers]
+        # Wait for all tasks to be processed.
+        process_queue.join()
+
+        # Join the worker threads.
+        for t in workers:
+            t.join()
 
         if not process_queue.empty():
             raise Exception("Queue should be empty after processing")
