@@ -1,7 +1,8 @@
+from datetime import datetime
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from datetime import datetime
 from configuration.config import config
 from utxo_indexer.indexer import get_indexer_client
 from utxo_indexer.models.config import Version
@@ -10,6 +11,7 @@ from utxo_indexer.models.config import Version
 class Command(BaseCommand):
     def handle(self, *args, **options):
         indexer = get_indexer_client()
+        assert indexer.toplevel_worker is not None
         node_version = indexer._get_network_info(indexer.toplevel_worker)
 
         Version.objects.update_or_create(
