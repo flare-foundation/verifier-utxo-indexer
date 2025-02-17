@@ -31,6 +31,7 @@ class BtcIndexerClient(IndexerClient):
 
         processed_block = BlockProcessorMemory()
 
+        assert self.toplevel_worker is not None, "Toplevel worker is not set"
         block_hash = self._get_block_hash_from_height(block_height, self.toplevel_worker)
         res_block = self._get_block_by_hash(block_hash, self.toplevel_worker)
 

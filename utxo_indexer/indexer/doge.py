@@ -1,6 +1,6 @@
 import logging
 import threading
-from queue import Queue
+from queue import Empty, Queue
 from typing import Callable
 
 from django.db import transaction
@@ -24,12 +24,13 @@ logger = logging.getLogger(__name__)
 
 
 def thread_worker(session: Session, process_queue: Queue, processed_block: BlockProcessorMemory):
-    while not process_queue.empty():
-        item = process_queue.get()
-        if callable(item):
+    while True:
+        try:
+            item = process_queue.get_nowait()
             item(session, processed_block)
-        else:
-            raise Exception("Item in queue is not callable")
+            process_queue.task_done()
+        except Empty:
+            return
 
 
 def process_pre_vout_transaction(
@@ -41,16 +42,16 @@ def process_pre_vout_transaction(
     """Return the function that processes the transaction prevouts and link it to the spending transaction
 
     Args:
-        vin (IUtxoVinTransaction): vin object from spending transaction
+        vin (VinResponse): vin object from spending transaction
         vin_n (int): index of vin in spending transaction
-        tx_link (str): transaction id of spending transaction
+        tx_link (UtxoTransaction): transaction object of spending transaction
+        transaction_getter (Callable): function to retrieve transaction details
     """
 
     def _process_pre_vout_transaction(session: Session, processed_block: BlockProcessorMemory):
         txid, vout_n = vin.txid, vin.vout
         # Memo:
         vout = TransactionOutput.objects.filter(transaction_link__transaction_id=txid, n=vout_n).first()
-        prevout_res = None
         if vout is not None:
             prevout_res = vout.to_vout_response()
         else:
@@ -79,8 +80,9 @@ class DogeIndexerClient(IndexerClient):
         # NOTICE: we always assume that block processing is for blocks that are for sure on main branch of the blockchain
 
         processed_block = BlockProcessorMemory()
-        process_queue: Queue = Queue()
+        process_queue: Queue[Callable[[Session, BlockProcessorMemory], TransactionInput]] = Queue()
 
+        assert self.toplevel_worker is not None, "Toplevel worker is not set"
         block_hash = self._get_block_hash_from_height(block_height, self.toplevel_worker)
         res_block = self._get_block_by_hash(block_hash, self.toplevel_worker)
 
@@ -108,8 +110,9 @@ class DogeIndexerClient(IndexerClient):
             for vout in tx.vout:
                 processed_block.vouts.append(TransactionOutput.object_from_node_response(vout, tx_link))
 
-        # multithreading part of the processing
-        workers = []
+        # Multithreading part of the processing
+        # Launch worker threads
+        workers: list[threading.Thread] = []
         for worker_index in range(len(self.workers)):
             t = threading.Thread(
                 target=thread_worker, args=(self.workers[worker_index], process_queue, processed_block)
@@ -117,6 +120,8 @@ class DogeIndexerClient(IndexerClient):
             workers.append(t)
             t.start()
 
+        # Wait for all tasks to be processed and for workers to finnish.
+        process_queue.join()
         [t.join() for t in workers]
 
         if not process_queue.empty():
