@@ -40,4 +40,4 @@ if "django_prometheus" in settings.INSTALLED_APPS:
     info = Info("project_version", "Current version")
     info.info({"version": settings.PROJECT_VERSION})
     info = Info("project_build_date", "Docker image build date")
-    info.info({"build_date": settings.PROJECT_BUILD_DATE})
+    info.info({"build_date": settings.PROJECT_BUILD_DATE.isoformat()})

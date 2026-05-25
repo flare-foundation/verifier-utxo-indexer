@@ -1,7 +1,6 @@
 from .common import *
 
 MEDIA_ROOT = "/appdata/media/"
-STATIC_ROOT = "/tmp/staticroot/"
 
 DEBUG = False
 SECRET_KEY = os.environ["SECRET_KEY"]
@@ -27,24 +26,6 @@ if os.environ.get("EXPORT_METRICS", "") == "true":
         "django_prometheus.middleware.PrometheusAfterMiddleware",
     ]
     DATABASES["default"]["engine"] = "django_prometheus.db.backends.postgresql"
-
-try:
-    with open(os.path.join(BASE_DIR, "PROJECT_COMMIT_HASH")) as f:
-        PROJECT_COMMIT_HASH = f.read().strip()
-except FileNotFoundError:
-    pass
-
-try:
-    with open(os.path.join(BASE_DIR, "PROJECT_VERSION")) as f:
-        PROJECT_VERSION = f.read().strip()
-except FileNotFoundError:
-    pass
-
-try:
-    with open(os.path.join(BASE_DIR, "PROJECT_BUILD_DATE")) as f:
-        PROJECT_BUILD_DATE = f.read().strip()
-except FileNotFoundError:
-    pass
 
 # sentry
 if os.environ.get("SENTRY_DSN") is not None:

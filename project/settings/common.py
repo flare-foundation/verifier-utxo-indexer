@@ -13,7 +13,8 @@ PROJECT_NAME = _pyproject["project"]["name"]
 PROJECT_VERSION = _pyproject["project"]["version"]
 PROJECT_SETTINGS = os.environ.get("DJANGO_SETTINGS_MODULE", "project.settings.local")
 PROJECT_COMMIT_HASH = os.environ.get("PROJECT_COMMIT_HASH", "local")
-PROJECT_BUILD_DATE = os.environ.get("PROJECT_BUILD_DATE", datetime.now(tz=UTC).isoformat())
+_build_date = os.environ.get("PROJECT_BUILD_DATE")
+PROJECT_BUILD_DATE = datetime.fromisoformat(_build_date) if _build_date else datetime.now(tz=UTC)
 
 # DJANGO CORE SETTINGS
 
@@ -147,5 +148,7 @@ AUTH_USER_MODEL = "afauth.AFUser"
 # STATIC FILES
 
 STATIC_URL = "/static/"
+
+STATIC_ROOT = "/appdata/static/"
 
 # END OF STATIC FILES

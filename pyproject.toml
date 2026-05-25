@@ -20,7 +20,7 @@ dependencies = [
     "cattrs==26.1.0",
     "requests==2.32.3",
     # wsgi
-    "uwsgi==2.0.31",
+    "gunicorn==25.1.0",
 ]
 
 [dependency-groups]
