@@ -19,6 +19,7 @@ dependencies = [
     "attrs==25.4.0",
     "cattrs==26.1.0",
     "requests==2.32.3",
+    "python-json-logger==4.0.0",
     # wsgi
     "gunicorn==25.1.0",
 ]
