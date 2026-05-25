@@ -51,9 +51,9 @@ class BtcIndexerClient(IndexerClient):
                     processed_block.vins_cb.append(cb_input)
                     processed_transaction.cbi.append(cb_input)
                 else:
-                    assert isinstance(
-                        vin.prevout, PrevoutResponse
-                    ), "PrevoutResponse sholdn't be None for BitcoinClient"
+                    assert isinstance(vin.prevout, PrevoutResponse), (
+                        "PrevoutResponse sholdn't be None for BitcoinClient"
+                    )
                     vout = VoutResponse(n=vin.vout, value=vin.prevout.value, scriptPubKey=vin.prevout.scriptPubKey)
                     tx_input = TransactionInput.object_from_node_response(vin_n, vin, vout, tx_link)
                     processed_block.vins.append(tx_input)

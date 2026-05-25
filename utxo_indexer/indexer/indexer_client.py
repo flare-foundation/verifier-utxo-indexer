@@ -1,6 +1,5 @@
 import logging
 import time
-import typing
 
 from requests.models import HTTPBasicAuth
 from requests.sessions import Session
@@ -36,12 +35,10 @@ class IndexerClient:
     """
 
     @classmethod
-    def new(cls, client: typing.Union[DogeClient, BtcClient], expected_production: int) -> "IndexerClient":
+    def new(cls, client: DogeClient | BtcClient, expected_production: int) -> IndexerClient:
         return cls(client, expected_production, config)
 
-    def __init__(
-        self, client: typing.Union[DogeClient, BtcClient], expected_production: int, instance_config: Config
-    ) -> None:
+    def __init__(self, client: DogeClient | BtcClient, expected_production: int, instance_config: Config) -> None:
         self._client = client
         self.instance_config = instance_config
 

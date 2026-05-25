@@ -1,6 +1,6 @@
 import string
+from collections.abc import Sequence
 from enum import Enum
-from typing import Sequence
 
 from py_flare_common.merkle import MerkleTree, single_hash
 

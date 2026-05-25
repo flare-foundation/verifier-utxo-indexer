@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, List, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from django.db import models
 
@@ -24,9 +25,9 @@ ZERO_SOURCE_ADDRESS_ROOT = ZERO_BYTES_32
 
 
 class UtxoTransaction(models.Model):
-    transactioninput_set: models.Manager["TransactionInput"]
-    transactioninputcoinbase_set: models.Manager["TransactionInputCoinbase"]
-    transactionoutput_set: models.Manager["TransactionOutput"]
+    transactioninput_set: models.Manager[TransactionInput]
+    transactioninputcoinbase_set: models.Manager[TransactionInputCoinbase]
+    transactionoutput_set: models.Manager[TransactionOutput]
 
     transaction_id = HexString32ByteField(primary_key=True)
 
@@ -57,7 +58,7 @@ class UtxoTransaction(models.Model):
     def __str__(self) -> str:
         return f"Transaction {self.transaction_id} in block : {self.block_number}"
 
-    def update_source_addresses_root(self, inputs: List["TransactionInput"]):
+    def update_source_addresses_root(self, inputs: list[TransactionInput]):
         addresses = []
         for input in inputs:
             if input.script_key_address != "":
@@ -66,7 +67,7 @@ class UtxoTransaction(models.Model):
                 addresses.append(None)
         self.source_addresses_root = self._construct_address_root(addresses)
 
-    def update_source_addresses_root_cb(self, inputs: List["TransactionInputCoinbase"]):
+    def update_source_addresses_root_cb(self, inputs: list[TransactionInputCoinbase]):
         addresses = [None]
         self.source_addresses_root = self._construct_address_root(addresses)
 

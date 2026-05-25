@@ -1,7 +1,7 @@
 import logging
 import threading
+from collections.abc import Callable
 from queue import Empty, Queue
-from typing import Callable
 
 from django.db import transaction
 from requests.sessions import Session

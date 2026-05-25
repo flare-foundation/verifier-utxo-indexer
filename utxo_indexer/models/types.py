@@ -1,5 +1,3 @@
-from typing import List
-
 from attrs import frozen
 
 
@@ -51,8 +49,8 @@ class VinResponse:
 @frozen
 class TransactionResponse:
     txid: str
-    vout: List[VoutResponse]
-    vin: List[VinResponse | CoinbaseVinResponse]
+    vout: list[VoutResponse]
+    vin: list[VinResponse | CoinbaseVinResponse]
 
 
 # Definition of BlockResponse class
@@ -62,4 +60,4 @@ class BlockResponse:
     height: int
     mediantime: int
     previousblockhash: str
-    tx: List[TransactionResponse]
+    tx: list[TransactionResponse]
