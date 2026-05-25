@@ -55,7 +55,7 @@ test_django:
     AUTH_USERNAME: authuser
     AUTH_PASSWORD: authpass
   services:
-    - name: postgres:15
+    - name: postgres:18
       alias: postgresdb
   image:
     name: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG

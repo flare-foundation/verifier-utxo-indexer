@@ -52,6 +52,10 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Compute build date
+      id: build-date
+      run: echo "value=$(date -u --iso-8601=seconds)" >>$GITHUB_OUTPUT
+
     - name: Build and push default image
       uses: docker/build-push-action@v5
       with:
@@ -59,4 +63,7 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ env.ALL_TAGS }}
+        build-args: |
+          PROJECT_COMMIT_HASH=${{ github.sha }}
+          PROJECT_BUILD_DATE=${{ steps.build-date.outputs.value }}
 

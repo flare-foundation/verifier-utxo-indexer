@@ -1,15 +1,19 @@
-import datetime
 import os
-
-# AFLABS PROJECT SETTINGS
-PROJECT_NAME = "UTXO Indexer"
-PROJECT_SETTINGS = os.environ.get("DJANGO_SETTINGS_MODULE", "project.settings.local")
-PROJECT_COMMIT_HASH = "local"
-PROJECT_VERSION = "local"
-PROJECT_BUILD_DATE = datetime.datetime.now(tz=datetime.UTC).isoformat()
+import tomllib
+from datetime import UTC, datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+with open(os.path.join(BASE_DIR, "pyproject.toml"), "rb") as f:
+    _pyproject = tomllib.load(f)
+
+# AFLABS PROJECT SETTINGS
+PROJECT_NAME = _pyproject["project"]["name"]
+PROJECT_VERSION = _pyproject["project"]["version"]
+PROJECT_SETTINGS = os.environ.get("DJANGO_SETTINGS_MODULE", "project.settings.local")
+PROJECT_COMMIT_HASH = os.environ.get("PROJECT_COMMIT_HASH", "local")
+PROJECT_BUILD_DATE = os.environ.get("PROJECT_BUILD_DATE", datetime.now(tz=UTC).isoformat())
 
 # DJANGO CORE SETTINGS
 
