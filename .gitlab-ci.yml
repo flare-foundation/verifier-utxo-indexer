@@ -1,12 +1,19 @@
-.test_template: &test
+variables:
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.cache/uv"
+
+.test_template:
   stage: test
-  variables:
-    GIT_STRATEGY: none
-  image:
-    name: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
-    entrypoint: [""]
-  only:
-    - branches
+  image: ghcr.io/astral-sh/uv:python3.14-bookworm-slim
+  cache:
+    key:
+      files:
+        - uv.lock
+    paths:
+      - .cache/uv
+  before_script:
+    - uv sync --frozen
+  rules:
+    - if: $CI_COMMIT_BRANCH
 
 stages:
   - build
@@ -40,9 +47,8 @@ build_tags:
     - tags
 
 test_django:
-  stage: test
+  extends: .test_template
   variables:
-    GIT_STRATEGY: none
     POSTGRES_DB: "db"
     DB_NAME: "db"
     POSTGRES_USER: "dbuser"
@@ -57,29 +63,17 @@ test_django:
   services:
     - name: postgres:18
       alias: postgresdb
-  image:
-    name: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
-    entrypoint: [""]
   script:
-    - cd /app
-    - coverage run --source="." manage.py test --settings=project.settings.ci_testing
-    - coverage xml
-    - mv coverage.xml $CI_PROJECT_DIR/
-    - mv testreport.xml $CI_PROJECT_DIR/
-  after_script:
-    - cp /app/testreport.xml ${CI_PROJECT_DIR}/junit-report.xml
+    - uv run pytest --cov --cov-report=xml:coverage.xml --junit-xml=junit.xml .
   artifacts:
     reports:
-      junit: testreport.xml
+      junit: junit.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
-  only:
-    - branches
 
 test_ruff:
-  <<: *test
+  extends: .test_template
   script:
-    - cd /app
-    - python -m ruff check .
-    - python -m ruff format --check
+    - uv run ruff check .
+    - uv run ruff format --check
