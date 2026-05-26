@@ -93,6 +93,6 @@ omit = ['project/*', 'manage.py', '*/migrations/*']
 reportIncompatibleVariableOverride = false
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = 'project.settings.testing'
-addopts = '--ds=project.settings.testing'
+DJANGO_SETTINGS_MODULE = 'project.settings.tests'
+addopts = '--ds=project.settings.tests'
 python_files = ['tests.py', 'tests/*.py']

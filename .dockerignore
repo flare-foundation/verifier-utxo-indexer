@@ -1,2 +1,16 @@
-dumps/
-docker/local/db-data*
+# ignore everything
+*
+
+# project files
+!*.py
+!pyproject.toml
+!uv.lock
+
+!afauth
+!client
+!configuration
+!project
+!utxo_indexer
+
+!docker/bin
+!docker/entrypoint-local.sh
