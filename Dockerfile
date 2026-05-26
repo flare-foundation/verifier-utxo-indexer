@@ -22,10 +22,11 @@ ARG DEV=false
 ARG PROJECT_COMMIT_HASH=local
 ARG PROJECT_BUILD_DATE=
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl \
-      $([ "$DEV" = "true" ] && echo gosu) && \
-    rm -rf /var/lib/apt/lists/*
+RUN if [ "$DEV" = "true" ]; then \
+      apt-get update && \
+      apt-get install -y --no-install-recommends gosu && \
+      rm -rf /var/lib/apt/lists/*; \
+    fi
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
