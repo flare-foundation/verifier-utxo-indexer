@@ -102,6 +102,7 @@ MEDIA_URL = "/media/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -163,7 +164,11 @@ AUTH_USER_MODEL = "afauth.AFUser"
 # STATIC FILES
 
 STATIC_URL = "/static/"
-
 STATIC_ROOT = "/appdata/static/"
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # END OF STATIC FILES

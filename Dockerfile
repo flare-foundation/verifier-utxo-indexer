@@ -32,15 +32,18 @@ ENV PYTHONUNBUFFERED=1
 ENV PROJECT_COMMIT_HASH=$PROJECT_COMMIT_HASH
 ENV PROJECT_BUILD_DATE=$PROJECT_BUILD_DATE
 
-RUN addgroup --gid 10001 app && adduser --uid 10001 --ingroup app --disabled-password app
-
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY . /app
 
 ENV PATH="/opt/venv/bin:/app/docker/bin:${PATH}"
 
-RUN chown -R 10001:10001 /app
+RUN DJANGO_SETTINGS_MODULE=project.settings.common \
+    addgroup --gid 10001 app && \
+    adduser --uid 10001 --ingroup app --disabled-password app && \
+    mkdir -p /appdata/static && \
+    python manage.py collectstatic --no-input && \
+    chown -R 10001:10001 /app /appdata
 
 EXPOSE 8000
 
