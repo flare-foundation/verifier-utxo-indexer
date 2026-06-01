@@ -45,7 +45,7 @@ class UserManager(BaseUserManager["AFUser"]):
 
     def create_user(
         self, email: str, first_name: str, last_name: str, password: str | None = None, is_active: bool = True, **kwargs
-    ) -> "AFUser":
+    ) -> AFUser:
         """
         Creates and saves a User with the given email, first_name, last_name
         and password
@@ -70,7 +70,7 @@ class UserManager(BaseUserManager["AFUser"]):
 
         return user
 
-    def create_superuser(self, email: str, first_name: str, last_name: str, password: str | None, **kwargs) -> "AFUser":
+    def create_superuser(self, email: str, first_name: str, last_name: str, password: str | None, **kwargs) -> AFUser:
         """
         Creates and saves a superuser with the given email, first_name,
         last_name and password

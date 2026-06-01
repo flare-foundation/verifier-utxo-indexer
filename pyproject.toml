@@ -1,3 +1,46 @@
+[project]
+name = "verifier-utxo-indexer"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    # django
+    "django==5.2.12",
+    "django-cors-headers==4.9.0",
+    # database
+    "psycopg[binary]==3.3.3",
+    # monitoring
+    "prometheus-client==0.24.1",
+    "django-prometheus==2.4.1",
+    "sentry-sdk==2.53.0",
+    # blockchain
+    "py-flare-common==0.1.6",
+    "eth-hash[pycryptodome]",
+    # other
+    "attrs==25.4.0",
+    "cattrs==26.1.0",
+    "requests==2.32.3",
+    "python-json-logger==4.0.0",
+    # wsgi
+    "gunicorn==25.1.0",
+    "whitenoise>=6.12.0",
+]
+
+[dependency-groups]
+dev = [
+    # lint and format
+    "ruff==0.15.7",
+    "pre-commit==4.5.1",
+
+    # testing
+    "pytest==9.0.2",
+    "pytest-django==4.11.1",
+    "pytest-cov==7.1.0",
+
+    # types
+    "django-types==0.23.0",
+    "types-requests==2.32.0.20240914",
+]
+
 [tool.ruff]
 line-length = 120
 extend-exclude = ['venv', 'env', 'migrations']
@@ -48,3 +91,8 @@ omit = ['project/*', 'manage.py', '*/migrations/*']
 
 [tool.pyright]
 reportIncompatibleVariableOverride = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = 'project.settings.tests'
+addopts = '--ds=project.settings.tests'
+python_files = ['tests.py', 'tests/*.py']

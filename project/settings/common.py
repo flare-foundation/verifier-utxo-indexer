@@ -1,15 +1,20 @@
-import datetime
 import os
-
-# AFLABS PROJECT SETTINGS
-PROJECT_NAME = "UTXO Indexer"
-PROJECT_SETTINGS = os.environ.get("DJANGO_SETTINGS_MODULE", "project.settings.local")
-PROJECT_COMMIT_HASH = "local"
-PROJECT_VERSION = "local"
-PROJECT_BUILD_DATE = datetime.datetime.now(tz=datetime.UTC).isoformat()
+import tomllib
+from datetime import UTC, datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+with open(os.path.join(BASE_DIR, "pyproject.toml"), "rb") as f:
+    _pyproject = tomllib.load(f)
+
+# AFLABS PROJECT SETTINGS
+PROJECT_NAME = _pyproject["project"]["name"]
+PROJECT_VERSION = _pyproject["project"]["version"]
+PROJECT_SETTINGS = os.environ.get("DJANGO_SETTINGS_MODULE", "project.settings.local")
+PROJECT_COMMIT_HASH = os.environ.get("PROJECT_COMMIT_HASH", "local")
+_build_date = os.environ.get("PROJECT_BUILD_DATE")
+PROJECT_BUILD_DATE = datetime.fromisoformat(_build_date) if _build_date else datetime.now(tz=UTC)
 
 # DJANGO CORE SETTINGS
 
@@ -31,26 +36,41 @@ DATABASES = {
 }
 
 # logging
+LOG_FORMAT = os.environ.get("LOG_FORMAT", "default")
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "caller": {
+            "()": "project.logging.CallerFilter",
+        },
+    },
     "formatters": {
         "default": {
-            "()": "django.utils.log.ServerFormatter",
-            "format": "[{server_time}] {levelname} {name}: {message}",
+            "format": "[{timestamp}] [{datetime}] {levelname} {caller}: {message}",
             "style": "{",
+        },
+        "json": {
+            "()": "pythonjsonlogger.json.JsonFormatter",
+            "fmt": "%(timestamp)s %(datetime)s %(levelname)s %(caller)s %(message)s",
+            "rename_fields": {
+                "levelname": "level",
+            },
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stderr",
-            "formatter": "default",
+            "formatter": LOG_FORMAT,
+            "filters": ["caller"],
         },
     },
     "root": {
         "handlers": ["console"],
-        "level": "INFO",
+        "level": LOG_LEVEL,
     },
 }
 
@@ -82,6 +102,7 @@ MEDIA_URL = "/media/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -143,5 +164,11 @@ AUTH_USER_MODEL = "afauth.AFUser"
 # STATIC FILES
 
 STATIC_URL = "/static/"
+STATIC_ROOT = "/appdata/static/"
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # END OF STATIC FILES

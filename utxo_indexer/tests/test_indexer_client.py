@@ -53,7 +53,7 @@ class DecoratorRetryTest(TestCase):
         except Exception:
             pass
         else:
-            raise AssertionError("retry should return exception, because" "error_until returns Exception 5 times")
+            raise AssertionError("retry should return exception, becauseerror_until returns Exception 5 times")
 
 
 class IndexerClientAuxiliaryFunctionTest(TestCase):

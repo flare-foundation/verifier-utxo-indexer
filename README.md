@@ -1,77 +1,48 @@
-# README.md
+<!-- LOGO -->
 
-install python 3.11 if not yet installed
-```sh
-pyenv install 3.11.4
-```
+<div align="center">
+  <a href="https://flare.network/" target="blank">
+    <img src="https://content.flare.network/Flare-2.svg" width="300" alt="Flare Logo" />
+  </a>
+  <br />
+  Indexes UTXO chains (Bitcoin, Dogecoin) for FDC attestation verification
+  <br />
+  <a href="#verifier-utxo-indexer">About</a>
+  ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+  ·
+  <a href="SECURITY.md">Security</a>
+  ·
+  <a href="CHANGELOG.md">Changelog</a>
+</div>
 
-set up dev environment
-```sh
-pyenv virtualenv 3.11.4 verifier_utxo_indexer
-pyenv local verifier_utxo_indexer
-pip install -r project/requirements/local.txt
-pre-commit install
-```
+# Verifier UTXO Indexer
 
-if you don't have it yet get [afh](https://git.aflabs.org/janezic.matej/afh) here, its a CLI tool that makes it easier for you to use docker
+Indexes UTXO-based chains (Bitcoin, Dogecoin) and exposes a verification API
+used by FDC (Flare Data Connector) attestation providers.
 
-set up docker
-```sh
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev environment setup.
+
+Quick start:
+
+```bash
 cp .env.example .env
-afh build
-afh up
-afh migrate
+# fill in SOURCE_NAME, NODE_RPC_URL, AUTH_USERNAME, AUTH_PASSWORD
+docker compose build
+docker compose up -d
 ```
 
-if you have a dump
-```sh
-afh import dumps/dump_file
+If you have `SERVER_PROXY_PORT` set to `8000` in your `.env` file, the API is
+available at <http://localhost:8000>.
+
+## Deployment
+
+Create a `.env` file and complete it with the necessary information for the
+target source chain.
+
+```bash
+docker compose pull
+docker compose up -d
 ```
-
-
-## Testing
-
-In order to run the tests one needs a connection to a running doge node (mainnet). Provide the url and possible basic auth credentials as variables in env
-```sh
-NODE_RPC_URL=url
-AUTH_USERNAME=user
-AUTH_PASSWORD=pass
-```
-
-To run test simply run
-```sh
-afh manage test
-```
-
-To run the tests with coverage
-```sh
-
-afh exec appserver coverage run manage.py test
-```
-
-and then get the coverage report with 
-```sh
-afh exec appserver coverage report
-```
-
-
-Without afh the following commands are useful
-
-to build the app
-```sh
-docker compose -f docker/local/docker-compose.yaml build
-docker compose -f docker/local/docker-compose.yaml up -d
-docker exec -it doge-indexer_server python manage.py migrate
-```
-
-to run the tests
-```sh
-docker exec -it doge-indexer_server python manage.py test
-```
-
-to check the coverage
-```sh
-docker exec -it doge-indexer_server coverage run manage.py test
-docker exec -it doge-indexer_server coverage report
-```
-
