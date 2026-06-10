@@ -1,9 +1,10 @@
 import logging
 import threading
 from collections.abc import Callable
+from contextlib import closing
 from queue import Empty, Queue
 
-from django.db import transaction
+from django.db import connection, transaction
 from requests.sessions import Session
 
 from client import DogeClient
@@ -24,13 +25,16 @@ logger = logging.getLogger(__name__)
 
 
 def thread_worker(session: Session, process_queue: Queue, processed_block: BlockProcessorMemory):
-    while True:
-        try:
-            item = process_queue.get_nowait()
-            item(session, processed_block)
-            process_queue.task_done()
-        except Empty:
-            return
+    # close this thread's lazily-opened db connection on exit so it isn't leaked
+    # django connections are thread-local and there is no request cycle to close them
+    with closing(connection):
+        while True:
+            try:
+                item = process_queue.get_nowait()
+                item(session, processed_block)
+                process_queue.task_done()
+            except Empty:
+                return
 
 
 def process_pre_vout_transaction(
