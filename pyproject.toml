@@ -96,3 +96,6 @@ reportIncompatibleVariableOverride = false
 DJANGO_SETTINGS_MODULE = 'project.settings.tests'
 addopts = '--ds=project.settings.tests'
 python_files = ['tests.py', 'tests/*.py']
+
+[tool.uv]
+exclude-newer = "1 week"
