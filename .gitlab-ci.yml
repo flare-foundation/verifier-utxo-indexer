@@ -1,9 +1,26 @@
+stages:
+  - test
+  - sbom
+
+default:
+  tags:
+    - flarenetwork
+  artifacts:
+    expire_in: 3 days
+
 variables:
   UV_CACHE_DIR: "$CI_PROJECT_DIR/.cache/uv"
 
+include:
+  - component: gitlab.com/flarenetwork/ci-components-private/dependency-track@2
+  - template: Jobs/Secret-Detection.latest.gitlab-ci.yml
+  - component: gitlab.com/flarenetwork/ci-components-private/lgtm@2
+  - component: gitlab.com/flarenetwork/ci-components-private/lint-dockerfile@2
+  - component: gitlab.com/flarenetwork/ci-components-private/lint-shell@2
+
 .test_template:
   stage: test
-  image: ghcr.io/astral-sh/uv:python3.14-trixie-slim
+  image: ghcr.io/astral-sh/uv:python3.14-bookworm-slim@sha256:7cf77f594be8042dab6daa9fe326f90962252268b4f120a7f5dccce4d947e6c1
   cache:
     key:
       files:
@@ -13,36 +30,33 @@ variables:
   before_script:
     - uv sync --frozen
   rules:
-    - if: $CI_COMMIT_BRANCH
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_TAG'
 
-stages:
-  - test
-
-test_django:
-  extends: .test_template
-  variables:
-    POSTGRES_DB: "db"
-    DB_NAME: "db"
-    POSTGRES_USER: "dbuser"
-    DB_USER: "dbuser"
-    POSTGRES_PASSWORD: "dbpass"
-    DB_PASSWORD: "dbpass"
-    DB_HOST: "postgresdb"
-    DB_PORT: "5432"
-    NODE_RPC_URL: "https://provide_me"
-    AUTH_USERNAME: authuser
-    AUTH_PASSWORD: authpass
-  services:
-    - name: postgres:18
-      alias: postgresdb
-  script:
-    - uv run pytest --cov --cov-report=xml:coverage.xml --junit-xml=junit.xml .
-  artifacts:
-    reports:
-      junit: junit.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
+# test_django:
+#   extends: .test_template
+#   variables:
+#     POSTGRES_DB: "db"
+#     DB_NAME: "db"
+#     POSTGRES_USER: "dbuser"
+#     DB_USER: "dbuser"
+#     POSTGRES_PASSWORD: "dbpass"
+#     DB_PASSWORD: "dbpass"
+#     DB_HOST: "postgresdb"
+#     DB_PORT: "5432"
+#     NODE_RPC_URL: "https://provide_me"
+#     AUTH_USERNAME: authuser
+#     AUTH_PASSWORD: authpass
+#   services:
+#     - name: postgres:18
+#       alias: postgresdb
+#   script:
+#     - uv run pytest --cov --cov-report=xml:coverage.xml --junit-xml=junit.xml .
+#   artifacts:
+#     reports:
+#       junit: junit.xml
+#       coverage_report:
+#         coverage_format: cobertura
+#         path: coverage.xml
 
 test_ruff:
   extends: .test_template

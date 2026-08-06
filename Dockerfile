@@ -1,3 +1,4 @@
+#checkov:skip=CKV_DOCKER_2: Health check is not required
 FROM python:3.14-slim-trixie@sha256:c845af9399020c7e562969a13689e929074a10fd057acd1b1fad06a2fb068e97 AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.16@sha256:440fd6477af86a2f1b38080c539f1672cd22acb1b1a47e321dba5158ab08864d /uv /uvx /bin/
@@ -22,6 +23,7 @@ ARG DEV=false
 ARG PROJECT_COMMIT_HASH=local
 ARG PROJECT_BUILD_DATE=
 
+# hadolint ignore=DL3008
 RUN if [ "$DEV" = "true" ]; then \
       apt-get update && \
       apt-get install -y --no-install-recommends gosu && \
