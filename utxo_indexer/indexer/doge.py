@@ -31,10 +31,17 @@ def thread_worker(session: Session, process_queue: Queue, processed_block: Block
         while True:
             try:
                 item = process_queue.get_nowait()
-                item(session, processed_block)
-                process_queue.task_done()
             except Empty:
                 return
+            try:
+                # once any worker failed, drain the rest without executing so process_block fails fast
+                if not processed_block.errors:
+                    item(session, processed_block)
+            except Exception as e:
+                processed_block.errors.append(e)
+            finally:
+                # must run even on failure, otherwise process_queue.join() blocks forever
+                process_queue.task_done()
 
 
 def process_pre_vout_transaction(
@@ -130,6 +137,12 @@ class DogeIndexerClient(IndexerClient):
 
         if not process_queue.empty():
             raise Exception("Queue should be empty after processing")
+
+        if processed_block.errors:
+            raise ExceptionGroup(
+                f"{len(processed_block.errors)} worker(s) failed while processing block {block_height}",
+                processed_block.errors,
+            )
 
         # Adding source_addresses_root to UtxoTransaction
         postprocess_obj: dict[str, PostProcessingMemoryElement] = {}

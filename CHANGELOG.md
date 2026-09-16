@@ -26,6 +26,10 @@ and this project adheres to
 - github release workflow triggered on `v*` tags
 - `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`
 
+### Fixed
+
+- doge indexer no longer hangs forever on `Queue.join()` when a worker thread fails (e.g. node RPC errors exhausting retries); the failure is now raised from `process_block` so the process exits and can be restarted
+
 # \[[v1.0.2](https://github.com/flare-foundation/verifier-utxo-indexer/tree/v1.0.2)\] - 2025-02-17
 
 - started keeping changelog

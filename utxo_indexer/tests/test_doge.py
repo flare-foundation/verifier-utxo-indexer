@@ -1,4 +1,5 @@
 import logging
+import threading
 from unittest.mock import patch
 
 from django.test import TestCase
@@ -289,6 +290,40 @@ class DogeIndexerClientTest(TestCase):
         # Nothing else needs to be tested here,
         # object_from_node_response and update_tip_state_done_block_process
         # have been tested already.
+
+    @patch("utxo_indexer.indexer.indexer_client.IndexerClient._get_block_hash_from_height")
+    @patch("utxo_indexer.indexer.indexer_client.IndexerClient._get_block_by_hash")
+    @patch("utxo_indexer.indexer.doge.DogeIndexerClient._get_transaction")
+    def test_process_block_worker_failure_raises(
+        self, mock_get_transaction, mock_get_block_by_hash, mock_get_block_hash_from_height
+    ):
+        """A failing worker must surface as an exception from process_block, not a hang on queue.join()"""
+        mock_get_block_by_hash.return_value = block_example_doge
+        mock_get_block_hash_from_height.return_value = None
+        mock_get_transaction.side_effect = Exception([KeyError("result")] * 5)
+        TipSyncState.instance().delete()
+        indexerDoge = DogeIndexerClient(self.clientDoge, 60, self.configDoge)
+
+        result: list[BaseException | None] = []
+
+        def target():
+            try:
+                indexerDoge.process_block(33232)
+                result.append(None)
+            except BaseException as e:
+                result.append(e)
+
+        t = threading.Thread(target=target, daemon=True)
+        t.start()
+        t.join(timeout=10)
+        self.assertFalse(t.is_alive(), "process_block hung after a worker failed")
+        self.assertIsInstance(result[0], ExceptionGroup)
+        assert isinstance(result[0], ExceptionGroup)
+        self.assertTrue(all(isinstance(e, Exception) for e in result[0].exceptions))
+        # nothing of the failed block may be persisted
+        self.assertEqual(UtxoBlock.objects.count(), 0)
+        self.assertEqual(UtxoTransaction.objects.count(), 0)
+        self.assertEqual(TipSyncState.instance().latest_indexed_height, 0)
 
     def test_process_block_real_example(self):
         """Test for process_block method"""
