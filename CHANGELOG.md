@@ -30,6 +30,10 @@ and this project adheres to
 
 - doge indexer no longer hangs forever on `Queue.join()` when a worker thread fails (e.g. node RPC errors exhausting retries); the failure is now raised from `process_block` so the process exits and can be restarted
 
+### Security
+
+- node RPC connections no longer trust the emSign ECC Root CA - G3, whose eMudhra intermediate CA keys were compromised. The CA bundle in the image no longer contains that root or the Comodo AAA Services root.
+
 # \[[v1.0.2](https://github.com/flare-foundation/verifier-utxo-indexer/tree/v1.0.2)\] - 2025-02-17
 
 - started keeping changelog

@@ -99,3 +99,5 @@ python_files = ['tests.py', 'tests/*.py']
 
 [tool.uv]
 exclude-newer = "1 week"
+# temporary: certifi 2026.10.19 drops the compromised emSign root, remove once it is a week old
+exclude-newer-package = { certifi = false }
